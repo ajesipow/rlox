@@ -1,0 +1,12 @@
+[package]
+name = "rlox"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5.9", features = ["derive"] }
+thiserror = "1.0.62"
