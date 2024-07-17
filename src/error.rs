@@ -9,3 +9,12 @@ pub(crate) enum Error {
     #[error("cannot read input")]
     IO(#[from] std::io::Error),
 }
+
+#[derive(Debug, Error)]
+pub(crate) enum LexicalError {
+    #[error("unexpected character {char:?} on line {line:?}")]
+    UnexpectedCharacter {
+        char: char,
+        line: usize,
+    }
+}

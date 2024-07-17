@@ -1,51 +1,74 @@
+use crate::error::LexicalError;
+use crate::token::TokenKind;
+use crate::token::{Token, Tokens};
 use std::mem;
 
-use crate::token::Token;
-use crate::token::TokenKind;
-
 #[derive(Debug)]
-pub(crate) struct Scanner {
-    source: String,
-    tokens: Vec<Token>,
-}
+pub(crate) struct Scanner;
 
 impl Scanner {
-    pub(crate) fn new(source: String) -> Self {
-        Self {
-            source,
-            tokens: vec![],
-        }
-    }
-
-    pub(crate) fn scan_tokens(&mut self) -> &[Token] {
+    pub(crate) fn scan_tokens(source: String) -> Tokens {
+        let mut tokens = vec![];
         let mut lexeme = String::new();
         let line = 1;
 
         // TODO: Iterates over Unicode Scalar Values instead of grapheme clusters.
-        for char in self.source.chars() {
+        let mut characters = source.chars().peekable();
+        while let Some(char) = characters.next() {
             lexeme.push(char);
             let token_kind = match char {
-                '(' => Some(TokenKind::LeftParen),
-                ')' => Some(TokenKind::RightParen),
-                '{' => Some(TokenKind::LeftBrace),
-                '}' => Some(TokenKind::RightBrace),
-                ',' => Some(TokenKind::Comma),
-                '.' => Some(TokenKind::Dot),
-                '-' => Some(TokenKind::Minus),
-                '+' => Some(TokenKind::Plus),
-                ';' => Some(TokenKind::Semicolon),
-                '*' => Some(TokenKind::Star),
-                _ => None,
+                '(' => Ok(TokenKind::LeftParen),
+                ')' => Ok(TokenKind::RightParen),
+                '{' => Ok(TokenKind::LeftBrace),
+                '}' => Ok(TokenKind::RightBrace),
+                ',' => Ok(TokenKind::Comma),
+                '.' => Ok(TokenKind::Dot),
+                '-' => Ok(TokenKind::Minus),
+                '+' => Ok(TokenKind::Plus),
+                ';' => Ok(TokenKind::Semicolon),
+                '*' => Ok(TokenKind::Star),
+                '!' => {
+                    if characters.next_if_eq(&'=').is_some() {
+                        Ok(TokenKind::BangEqual)
+                    } else {
+                        Ok(TokenKind::Bang)
+                    }
+                },
+                '=' => {
+                    if characters.next_if_eq(&'=').is_some() {
+                        Ok(TokenKind::EqualEqual)
+                    } else {
+                        Ok(TokenKind::Equal)
+                    }
+                },
+                '<' => {
+                    if characters.next_if_eq(&'=').is_some() {
+                        Ok(TokenKind::LessEqual)
+                    } else {
+                        Ok(TokenKind::Less)
+                    }
+                },
+                '>' => {
+                    if characters.next_if_eq(&'=').is_some() {
+                        Ok(TokenKind::GreaterEqual)
+                    } else {
+                        Ok(TokenKind::Greater)
+                    }
+                }
+                _ => Err(LexicalError::UnexpectedCharacter { char, line }),
             };
-            if let Some(token_kind) = token_kind {
-                let this_lexeme = mem::take(&mut lexeme);
-                self.tokens
-                    .push(Token::new(token_kind, Some(this_lexeme), line))
-            }
+            let lex_result = match token_kind {
+                Ok(token_kind) => {
+                    let this_lexeme = mem::take(&mut lexeme);
+                    Ok(Token::new(token_kind, Some(this_lexeme), line))
+                }
+                Err(lexical_error) => Err(lexical_error),
+            };
+            tokens.push(lex_result);
         }
 
-        self.tokens.push(Token::new(TokenKind::Eof, None, line));
+        tokens.push(Ok(Token::new(TokenKind::Eof, None, line)));
 
-        &self.tokens
+        Tokens(tokens)
     }
 }
