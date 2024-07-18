@@ -1,7 +1,7 @@
 use crate::error::LexicalError;
 
 #[derive(Debug)]
-pub(crate) struct Tokens(pub(crate) Vec<LexResult>);
+pub struct Tokens(pub(crate) Vec<LexResult>);
 
 pub(crate) type LexResult = Result<Token, LexicalError>;
 

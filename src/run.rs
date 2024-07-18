@@ -2,6 +2,7 @@ use std::io;
 use std::io::Write;
 
 use crate::error::Error;
+use crate::scanner::Scanner;
 
 pub fn run_prompt() -> Result<(), Error> {
     let mut buf = String::new();
@@ -14,7 +15,8 @@ pub fn run_prompt() -> Result<(), Error> {
         if bytes_read == 0 {
             return Ok(());
         }
-        print!("{buf}");
+        let tokens = Scanner::scan_tokens(buf.clone());
+        println!("tokens: {:?}", tokens);
         buf.clear();
     }
 }

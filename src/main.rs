@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use rlox::error::PublicError;
-use rlox::{read_source_file, run_prompt};
+use rlox::read_source_file;
+use rlox::run_prompt;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
