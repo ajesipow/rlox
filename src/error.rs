@@ -11,7 +11,10 @@ pub enum Error {
 }
 
 #[derive(Debug, Error)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub enum LexicalError {
     #[error("unexpected character {char:?} on line {line:?}")]
     UnexpectedCharacter { char: char, line: usize },
+    #[error("unterminated string on line {line:?}")]
+    UnterminatedString { line: usize },
 }

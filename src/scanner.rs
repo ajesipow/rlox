@@ -58,6 +58,22 @@ impl Scanner {
                     lexeme.push(char);
                     Ok(TokenKind::Star)
                 }
+                '"' => {
+                    lexeme.push(char);
+                    loop {
+                        match characters.next() {
+                            None => break Err(LexicalError::UnterminatedString { line }),
+                            Some(new_char) => {
+                                lexeme.push(new_char);
+                                if new_char == '\n' {
+                                    line += 1;
+                                } else if new_char == '"' {
+                                    break Ok(TokenKind::String);
+                                }
+                            }
+                        }
+                    }
+                }
                 '!' => {
                     lexeme.push(char);
                     if let Some(c2) = characters.next_if_eq(&'=') {
@@ -205,6 +221,56 @@ mod test {
                 Token::new(TokenKind::RightBrace, Some("}".to_string()), 1),
                 Token::new(TokenKind::Bang, Some("!".to_string()), 5),
                 Token::new(TokenKind::Eof, None, 5),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_basic_valid_strings_works() {
+        let input = "\"this is a string\"".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(
+                    TokenKind::String,
+                    Some(r#""this is a string""#.to_string()),
+                    1
+                ),
+                Token::new(TokenKind::Eof, None, 1),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_multiline_strings_works() {
+        let input = "\"this is a string\nacross multiple lines\"".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(
+                    TokenKind::String,
+                    Some("\"this is a string\nacross multiple lines\"".to_string()),
+                    2
+                ),
+                Token::new(TokenKind::Eof, None, 2),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_unterminated_string_produces_error() {
+        let input = "\"this is not a string".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().collect_vec(),
+            vec![
+                Err(LexicalError::UnterminatedString { line: 1 }),
+                Ok(Token::new(TokenKind::Eof, None, 1)),
             ]
         )
     }
