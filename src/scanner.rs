@@ -109,3 +109,110 @@ impl Scanner {
         Tokens(tokens)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use itertools::Itertools;
+
+    #[test]
+    fn scanning_single_character_lexemes_works() {
+        let input = "(){},.-+;=*!<>/".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
+                Token::new(TokenKind::RightParen, Some(")".to_string()), 1),
+                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 1),
+                Token::new(TokenKind::RightBrace, Some("}".to_string()), 1),
+                Token::new(TokenKind::Comma, Some(",".to_string()), 1),
+                Token::new(TokenKind::Dot, Some(".".to_string()), 1),
+                Token::new(TokenKind::Minus, Some("-".to_string()), 1),
+                Token::new(TokenKind::Plus, Some("+".to_string()), 1),
+                Token::new(TokenKind::Semicolon, Some(";".to_string()), 1),
+                Token::new(TokenKind::Equal, Some("=".to_string()), 1),
+                Token::new(TokenKind::Star, Some("*".to_string()), 1),
+                Token::new(TokenKind::Bang, Some("!".to_string()), 1),
+                Token::new(TokenKind::Less, Some("<".to_string()), 1),
+                Token::new(TokenKind::Greater, Some(">".to_string()), 1),
+                Token::new(TokenKind::Slash, Some("/".to_string()), 1),
+                Token::new(TokenKind::Eof, None, 1),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_double_character_lexemes_works() {
+        let input = " != <= >= == = =\n!\n=".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(TokenKind::BangEqual, Some("!=".to_string()), 1),
+                Token::new(TokenKind::LessEqual, Some("<=".to_string()), 1),
+                Token::new(TokenKind::GreaterEqual, Some(">=".to_string()), 1),
+                Token::new(TokenKind::EqualEqual, Some("==".to_string()), 1),
+                Token::new(TokenKind::Equal, Some("=".to_string()), 1),
+                Token::new(TokenKind::Equal, Some("=".to_string()), 1),
+                Token::new(TokenKind::Bang, Some("!".to_string()), 2),
+                Token::new(TokenKind::Equal, Some("=".to_string()), 3),
+                Token::new(TokenKind::Eof, None, 3),
+            ]
+        )
+    }
+    
+    #[test]
+    fn ignoring_whitespaces_works() {
+        let input = "(   \r)    {\t     }\n\n\n\n!".to_string();
+        let tokens = Scanner::scan_tokens(input);
+        
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
+                Token::new(TokenKind::RightParen, Some(")".to_string()), 1),
+                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 1),
+                Token::new(TokenKind::RightBrace, Some("}".to_string()), 1),
+                Token::new(TokenKind::Bang, Some("!".to_string()), 5),
+                Token::new(TokenKind::Eof, None, 5),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_multiple_lines_works() {
+        let input = "(\n)\n{\n}\n".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
+                Token::new(TokenKind::RightParen, Some(")".to_string()), 2),
+                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 3),
+                Token::new(TokenKind::RightBrace, Some("}".to_string()), 4),
+                Token::new(TokenKind::Eof, None, 5),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_comments_works() {
+        let input = "() // this is a comment\n{} // another one".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
+                Token::new(TokenKind::RightParen, Some(")".to_string()), 1),
+                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 2),
+                Token::new(TokenKind::RightBrace, Some("}".to_string()), 2),
+                Token::new(TokenKind::Eof, None, 2),
+            ]
+        )
+    }
+}

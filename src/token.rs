@@ -6,6 +6,7 @@ pub struct Tokens(pub(crate) Vec<LexResult>);
 pub(crate) type LexResult = Result<Token, LexicalError>;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub(crate) struct Token {
     kind: TokenKind,
     lexeme: Option<String>,
@@ -23,7 +24,7 @@ impl Token {
 }
 
 #[derive(Debug)]
-
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub(crate) enum TokenKind {
     // Single-character tokens
     LeftParen,
