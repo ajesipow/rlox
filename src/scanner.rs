@@ -18,21 +18,100 @@ impl Scanner {
         let mut characters = source.chars().peekable();
         while let Some(char) = characters.next() {
             let token_kind = match char {
-                '(' => Ok(TokenKind::LeftParen),
-                ')' => Ok(TokenKind::RightParen),
-                '{' => Ok(TokenKind::LeftBrace),
-                '}' => Ok(TokenKind::RightBrace),
-                ',' => Ok(TokenKind::Comma),
-                '.' => Ok(TokenKind::Dot),
-                '-' => Ok(TokenKind::Minus),
-                '+' => Ok(TokenKind::Plus),
-                ';' => Ok(TokenKind::Semicolon),
-                '*' => Ok(TokenKind::Star),
-                '!' => Ok(TokenKind::Bang),
-                '=' => Ok(TokenKind::Equal),
-                '<' => Ok(TokenKind::Less),
-                '>' => Ok(TokenKind::Greater),
-                '/' => Ok(TokenKind::Slash),
+                '(' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::LeftParen)
+                }
+                ')' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::RightParen)
+                }
+                '{' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::LeftBrace)
+                }
+                '}' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::RightBrace)
+                }
+                ',' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::Comma)
+                }
+                '.' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::Dot)
+                }
+                '-' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::Minus)
+                }
+                '+' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::Plus)
+                }
+                ';' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::Semicolon)
+                }
+                '*' => {
+                    lexeme.push(char);
+                    Ok(TokenKind::Star)
+                }
+                '!' => {
+                    lexeme.push(char);
+                    if let Some(c2) = characters.next_if_eq(&'=') {
+                        lexeme.push(c2);
+                        Ok(TokenKind::BangEqual)
+                    } else {
+                        Ok(TokenKind::Bang)
+                    }
+                }
+                '=' => {
+                    lexeme.push(char);
+                    if let Some(c2) = characters.next_if_eq(&'=') {
+                        lexeme.push(c2);
+                        Ok(TokenKind::EqualEqual)
+                    } else {
+                        Ok(TokenKind::Equal)
+                    }
+                }
+                '<' => {
+                    lexeme.push(char);
+                    if let Some(c2) = characters.next_if_eq(&'=') {
+                        lexeme.push(c2);
+                        Ok(TokenKind::LessEqual)
+                    } else {
+                        Ok(TokenKind::Less)
+                    }
+                }
+                '>' => {
+                    lexeme.push(char);
+                    if let Some(c2) = characters.next_if_eq(&'=') {
+                        lexeme.push(c2);
+                        Ok(TokenKind::GreaterEqual)
+                    } else {
+                        Ok(TokenKind::Greater)
+                    }
+                }
+                '/' => {
+                    if characters.next_if_eq(&'/').is_some() {
+                        // We're discarding comments
+                        'comment: while let Some(c) = characters.peek() {
+                            if *c == '\n' {
+                                // We handle newlines separately, so don't consume it
+                                break 'comment;
+                            } else {
+                                // Consume the comment
+                                characters.next();
+                            }
+                        }
+                        continue;
+                    } else {
+                        lexeme.push(char);
+                        Ok(TokenKind::Slash)
+                    }
+                }
                 '\t' | ' ' | '\r' => continue,
                 '\n' => {
                     line += 1;
@@ -40,62 +119,9 @@ impl Scanner {
                 }
                 _ => Err(LexicalError::UnexpectedCharacter { char, line }),
             };
-            lexeme.push(char);
 
             let lex_result = match token_kind {
                 Ok(token_kind) => {
-                    let (token_kind, extra_char_for_lexeme) = match token_kind {
-                        TokenKind::Bang => {
-                            if let Some(c) = characters.next_if_eq(&'=') {
-                                (TokenKind::BangEqual, Some(c))
-                            } else {
-                                (token_kind, None)
-                            }
-                        }
-                        TokenKind::Equal => {
-                            if let Some(c) = characters.next_if_eq(&'=') {
-                                (TokenKind::EqualEqual, Some(c))
-                            } else {
-                                (token_kind, None)
-                            }
-                        }
-                        TokenKind::Less => {
-                            if let Some(c) = characters.next_if_eq(&'=') {
-                                (TokenKind::LessEqual, Some(c))
-                            } else {
-                                (token_kind, None)
-                            }
-                        }
-                        TokenKind::Greater => {
-                            if let Some(c) = characters.next_if_eq(&'=') {
-                                (TokenKind::GreaterEqual, Some(c))
-                            } else {
-                                (token_kind, None)
-                            }
-                        }
-                        TokenKind::Slash => {
-                            if characters.next_if_eq(&'/').is_some() {
-                                // We're discarding comments
-                                'comment: while let Some(c) = characters.peek() {
-                                    if *c == '\n' {
-                                        // We handle newlines separately, so don't consume it
-                                        break 'comment;
-                                    } else {
-                                        // Consume the comment
-                                        characters.next();
-                                    }
-                                }
-                                continue;
-                            } else {
-                                (token_kind, None)
-                            }
-                        }
-                        _ => (token_kind, None),
-                    };
-                    if let Some(c) = extra_char_for_lexeme {
-                        lexeme.push(c);
-                    }
-
                     let this_lexeme = mem::take(&mut lexeme);
                     Ok(Token::new(token_kind, Some(this_lexeme), line))
                 }
@@ -112,8 +138,9 @@ impl Scanner {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use itertools::Itertools;
+
+    use super::*;
 
     #[test]
     fn scanning_single_character_lexemes_works() {
@@ -163,12 +190,12 @@ mod test {
             ]
         )
     }
-    
+
     #[test]
     fn ignoring_whitespaces_works() {
         let input = "(   \r)    {\t     }\n\n\n\n!".to_string();
         let tokens = Scanner::scan_tokens(input);
-        
+
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
