@@ -60,6 +60,16 @@ impl Scanner {
                     lexeme.push(char);
                     Ok(TokenKind::Star)
                 }
+                c if c.is_ascii_alphabetic() || c == '_' => {
+                    lexeme.push(char);
+                    while let Some(next_digit) =
+                        characters.next_if(|c| c.is_ascii_alphanumeric() || *c == '_')
+                    {
+                        lexeme.push(next_digit);
+                    }
+
+                    Ok(TokenKind::Identifier)
+                }
                 c if c.is_ascii_digit() => {
                     lexeme.push(char);
                     while let Some(next_digit) = characters.next_if(|c| c.is_ascii_digit()) {
@@ -349,6 +359,31 @@ mod test {
                 Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
                 Ok(Token::new(TokenKind::Number, Some("0012".to_string()), 1)),
                 Ok(Token::new(TokenKind::Eof, None, 1)),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_identifiers_works() {
+        let input = "some_identifier _anotherOne als0 c1 0no 001_no ".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(
+                    TokenKind::Identifier,
+                    Some("some_identifier".to_string()),
+                    1
+                ),
+                Token::new(TokenKind::Identifier, Some("_anotherOne".to_string()), 1),
+                Token::new(TokenKind::Identifier, Some("als0".to_string()), 1),
+                Token::new(TokenKind::Identifier, Some("c1".to_string()), 1),
+                Token::new(TokenKind::Number, Some("0".to_string()), 1),
+                Token::new(TokenKind::Identifier, Some("no".to_string()), 1),
+                Token::new(TokenKind::Number, Some("001".to_string()), 1),
+                Token::new(TokenKind::Identifier, Some("_no".to_string()), 1),
+                Token::new(TokenKind::Eof, None, 1),
             ]
         )
     }
