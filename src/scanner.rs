@@ -1,5 +1,7 @@
 use std::mem;
 
+use itertools::peek_nth;
+
 use crate::error::LexicalError;
 use crate::token::Token;
 use crate::token::TokenKind;
@@ -15,7 +17,7 @@ impl Scanner {
         let mut line = 1;
 
         // TODO: Iterates over Unicode Scalar Values instead of grapheme clusters.
-        let mut characters = source.chars().peekable();
+        let mut characters = peek_nth(source.chars());
         while let Some(char) = characters.next() {
             let token_kind = match char {
                 '(' => {
@@ -57,6 +59,29 @@ impl Scanner {
                 '*' => {
                     lexeme.push(char);
                     Ok(TokenKind::Star)
+                }
+                c if c.is_ascii_digit() => {
+                    lexeme.push(char);
+                    while let Some(next_digit) = characters.next_if(|c| c.is_ascii_digit()) {
+                        lexeme.push(next_digit);
+                    }
+
+                    if let Some('.') = characters.peek() {
+                        match characters.peek_nth(1) {
+                            Some(c) if c.is_ascii_digit() => {
+                                // Consume the '.'
+                                let dot = characters.next().unwrap();
+                                lexeme.push(dot);
+                                while let Some(next_digit) =
+                                    characters.next_if(|c| c.is_ascii_digit())
+                                {
+                                    lexeme.push(next_digit);
+                                }
+                            }
+                            _ => (),
+                        }
+                    }
+                    Ok(TokenKind::Number)
                 }
                 '"' => {
                     lexeme.push(char);
@@ -112,13 +137,13 @@ impl Scanner {
                 }
                 '/' => {
                     if characters.next_if_eq(&'/').is_some() {
-                        // We're discarding comments
+                        // Discard comments
                         'comment: while let Some(c) = characters.peek() {
                             if *c == '\n' {
-                                // We handle newlines separately, so don't consume it
+                                // Newlines are handled separately, don't consume them here
                                 break 'comment;
                             } else {
-                                // Consume the comment
+                                // Consume the comment itself
                                 characters.next();
                             }
                         }
@@ -270,6 +295,59 @@ mod test {
             tokens.0.into_iter().collect_vec(),
             vec![
                 Err(LexicalError::UnterminatedString { line: 1 }),
+                Ok(Token::new(TokenKind::Eof, None, 1)),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_valid_integer_works() {
+        let input = "  1 20 4212".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().collect_vec(),
+            vec![
+                Ok(Token::new(TokenKind::Number, Some("1".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("20".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("4212".to_string()), 1)),
+                Ok(Token::new(TokenKind::Eof, None, 1)),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_valid_fractional_number_works() {
+        let input = "  0.0001 2.0 421.2".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().collect_vec(),
+            vec![
+                Ok(Token::new(TokenKind::Number, Some("0.0001".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("2.0".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("421.2".to_string()), 1)),
+                Ok(Token::new(TokenKind::Eof, None, 1)),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_invalid_fractional_number_works() {
+        let input = "  0. 2123. .2 .0012".to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().collect_vec(),
+            vec![
+                Ok(Token::new(TokenKind::Number, Some("0".to_string()), 1)),
+                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("2123".to_string()), 1)),
+                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
+                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("2".to_string()), 1)),
+                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("0012".to_string()), 1)),
                 Ok(Token::new(TokenKind::Eof, None, 1)),
             ]
         )
