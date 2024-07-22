@@ -23,7 +23,7 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub(crate) enum TokenKind {
     // Single-character tokens

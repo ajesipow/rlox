@@ -1,11 +1,34 @@
+use std::collections::HashMap;
 use std::mem;
 
 use itertools::peek_nth;
+use once_cell::sync::Lazy;
 
 use crate::error::LexicalError;
 use crate::token::Token;
 use crate::token::TokenKind;
 use crate::token::Tokens;
+
+static RESERVED_KEYWORDS: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
+    HashMap::from_iter([
+        ("and", TokenKind::And),
+        ("class", TokenKind::Class),
+        ("else", TokenKind::Else),
+        ("false", TokenKind::False),
+        ("for", TokenKind::For),
+        ("fun", TokenKind::Fun),
+        ("if", TokenKind::If),
+        ("nil", TokenKind::Nil),
+        ("or", TokenKind::Or),
+        ("print", TokenKind::Print),
+        ("return", TokenKind::Return),
+        ("super", TokenKind::Super),
+        ("this", TokenKind::This),
+        ("true", TokenKind::True),
+        ("var", TokenKind::Var),
+        ("while", TokenKind::While),
+    ])
+});
 
 #[derive(Debug)]
 pub(crate) struct Scanner;
@@ -68,7 +91,11 @@ impl Scanner {
                         lexeme.push(next_digit);
                     }
 
-                    Ok(TokenKind::Identifier)
+                    if let Some(token_kind) = RESERVED_KEYWORDS.get(&*lexeme) {
+                        Ok(*token_kind)
+                    } else {
+                        Ok(TokenKind::Identifier)
+                    }
                 }
                 c if c.is_ascii_digit() => {
                     lexeme.push(char);
@@ -383,6 +410,36 @@ mod test {
                 Token::new(TokenKind::Identifier, Some("no".to_string()), 1),
                 Token::new(TokenKind::Number, Some("001".to_string()), 1),
                 Token::new(TokenKind::Identifier, Some("_no".to_string()), 1),
+                Token::new(TokenKind::Eof, None, 1),
+            ]
+        )
+    }
+
+    #[test]
+    fn scanning_reserved_words_works() {
+        let input = "and class else false for fun if nil or print return super this true var while"
+            .to_string();
+        let tokens = Scanner::scan_tokens(input);
+
+        assert_eq!(
+            tokens.0.into_iter().flatten().collect_vec(),
+            vec![
+                Token::new(TokenKind::And, Some("and".to_string()), 1),
+                Token::new(TokenKind::Class, Some("class".to_string()), 1),
+                Token::new(TokenKind::Else, Some("else".to_string()), 1),
+                Token::new(TokenKind::False, Some("false".to_string()), 1),
+                Token::new(TokenKind::For, Some("for".to_string()), 1),
+                Token::new(TokenKind::Fun, Some("fun".to_string()), 1),
+                Token::new(TokenKind::If, Some("if".to_string()), 1),
+                Token::new(TokenKind::Nil, Some("nil".to_string()), 1),
+                Token::new(TokenKind::Or, Some("or".to_string()), 1),
+                Token::new(TokenKind::Print, Some("print".to_string()), 1),
+                Token::new(TokenKind::Return, Some("return".to_string()), 1),
+                Token::new(TokenKind::Super, Some("super".to_string()), 1),
+                Token::new(TokenKind::This, Some("this".to_string()), 1),
+                Token::new(TokenKind::True, Some("true".to_string()), 1),
+                Token::new(TokenKind::Var, Some("var".to_string()), 1),
+                Token::new(TokenKind::While, Some("while".to_string()), 1),
                 Token::new(TokenKind::Eof, None, 1),
             ]
         )

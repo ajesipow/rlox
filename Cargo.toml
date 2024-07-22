@@ -11,3 +11,4 @@ path = "src/main.rs"
 clap = { version = "4.5.9", features = ["derive"] }
 itertools = "0.13.0"
 thiserror = "1.0.62"
+once_cell = "1.19.0"
