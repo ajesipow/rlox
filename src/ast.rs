@@ -1,23 +1,25 @@
 use crate::token::Token;
 
 #[derive(Debug)]
-pub(crate) enum Expr {
+pub(crate) enum Expr<'a> {
     Binary {
-        left: Box<Expr>,
-        operator: Token,
-        right: Box<Expr>,
+        left: Box<Expr<'a>>,
+        operator: Token<'a>,
+        right: Box<Expr<'a>>,
     },
     Unary {
-        operator: Token,
-        right: Box<Expr>,
+        operator: Token<'a>,
+        right: Box<Expr<'a>>,
     },
     Grouping {
-        expression: Box<Expr>
+        expression: Box<Expr<'a>>,
     },
-    Literal(String)
+    Literal(String),
 }
 
 pub(crate) trait Visitor<T> {
-    
-    fn visit_expr(&mut self, expr: &Expr) -> T;
+    fn visit_expr(
+        &mut self,
+        expr: &Expr,
+    ) -> T;
 }

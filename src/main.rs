@@ -15,7 +15,7 @@ struct Args {
 
 fn main() -> Result<(), PublicError> {
     let args = Args::parse();
-    
+
     if let Some(file_path) = args.file {
         // TODO put this behind struct
         let raw_source = read_source_file(&file_path)?;

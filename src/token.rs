@@ -1,29 +1,29 @@
 use crate::error::LexicalError;
 
 #[derive(Debug)]
-pub struct Tokens(pub(crate) Vec<LexResult>);
+pub struct Tokens<'a>(pub(crate) Vec<LexResult<'a>>);
 
-pub(crate) type LexResult = Result<Token, LexicalError>;
+pub(crate) type LexResult<'a> = Result<Token<'a>, LexicalError>;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-pub(crate) struct Token {
+pub(crate) struct Token<'a> {
     kind: TokenKind,
-    lexeme: Option<String>,
+    lexeme: Option<&'a str>,
     line: usize,
 }
 
-impl Token {
+impl<'a> Token<'a> {
     pub(crate) fn new(
         kind: TokenKind,
-        lexeme: Option<String>,
+        lexeme: Option<&'a str>,
         line: usize,
     ) -> Self {
         Self { kind, lexeme, line }
     }
-    
+
     pub(crate) fn lexeme(&self) -> Option<&str> {
-        self.lexeme.as_ref().map(|s| s.as_str())
+        self.lexeme
     }
 }
 

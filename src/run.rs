@@ -15,7 +15,7 @@ pub fn run_prompt() -> Result<(), Error> {
         if bytes_read == 0 {
             return Ok(());
         }
-        let tokens = Scanner::scan_tokens(buf.clone());
+        let tokens = Scanner::scan_tokens(&buf);
         println!("tokens: {:?}", tokens);
         buf.clear();
     }

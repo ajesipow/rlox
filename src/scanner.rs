@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::mem;
 
 use itertools::peek_nth;
 use once_cell::sync::Lazy;
@@ -34,85 +33,56 @@ static RESERVED_KEYWORDS: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
 pub(crate) struct Scanner;
 
 impl Scanner {
-    pub(crate) fn scan_tokens(source: String) -> Tokens {
+    pub(crate) fn scan_tokens(source: &str) -> Tokens {
         let mut tokens = vec![];
-        let mut lexeme = String::new();
+        let mut lexeme_start = 0;
+        let mut lexeme_end = lexeme_start;
         let mut line = 1;
 
         // TODO: Iterates over Unicode Scalar Values instead of grapheme clusters.
         let mut characters = peek_nth(source.chars());
         while let Some(char) = characters.next() {
+            lexeme_end += 1;
             let token_kind = match char {
-                '(' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::LeftParen)
-                }
-                ')' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::RightParen)
-                }
-                '{' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::LeftBrace)
-                }
-                '}' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::RightBrace)
-                }
-                ',' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::Comma)
-                }
-                '.' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::Dot)
-                }
-                '-' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::Minus)
-                }
-                '+' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::Plus)
-                }
-                ';' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::Semicolon)
-                }
-                '*' => {
-                    lexeme.push(char);
-                    Ok(TokenKind::Star)
-                }
+                '(' => Ok(TokenKind::LeftParen),
+                ')' => Ok(TokenKind::RightParen),
+                '{' => Ok(TokenKind::LeftBrace),
+                '}' => Ok(TokenKind::RightBrace),
+                ',' => Ok(TokenKind::Comma),
+                '.' => Ok(TokenKind::Dot),
+                '-' => Ok(TokenKind::Minus),
+                '+' => Ok(TokenKind::Plus),
+                ';' => Ok(TokenKind::Semicolon),
+                '*' => Ok(TokenKind::Star),
                 c if c.is_ascii_alphabetic() || c == '_' => {
-                    lexeme.push(char);
-                    while let Some(next_digit) =
-                        characters.next_if(|c| c.is_ascii_alphanumeric() || *c == '_')
+                    while characters
+                        .next_if(|c| c.is_ascii_alphanumeric() || *c == '_')
+                        .is_some()
                     {
-                        lexeme.push(next_digit);
+                        lexeme_end += 1;
                     }
 
-                    if let Some(token_kind) = RESERVED_KEYWORDS.get(&*lexeme) {
+                    if let Some(token_kind) =
+                        RESERVED_KEYWORDS.get(&source[lexeme_start..lexeme_end])
+                    {
                         Ok(*token_kind)
                     } else {
                         Ok(TokenKind::Identifier)
                     }
                 }
                 c if c.is_ascii_digit() => {
-                    lexeme.push(char);
-                    while let Some(next_digit) = characters.next_if(|c| c.is_ascii_digit()) {
-                        lexeme.push(next_digit);
+                    while characters.next_if(|c| c.is_ascii_digit()).is_some() {
+                        lexeme_end += 1;
                     }
 
                     if let Some('.') = characters.peek() {
                         match characters.peek_nth(1) {
                             Some(c) if c.is_ascii_digit() => {
                                 // Consume the '.'
-                                let dot = characters.next().unwrap();
-                                lexeme.push(dot);
-                                while let Some(next_digit) =
-                                    characters.next_if(|c| c.is_ascii_digit())
-                                {
-                                    lexeme.push(next_digit);
+                                characters.next();
+                                lexeme_end += 1;
+                                while characters.next_if(|c| c.is_ascii_digit()).is_some() {
+                                    lexeme_end += 1;
                                 }
                             }
                             _ => (),
@@ -120,53 +90,46 @@ impl Scanner {
                     }
                     Ok(TokenKind::Number)
                 }
-                '"' => {
-                    lexeme.push(char);
-                    loop {
-                        match characters.next() {
-                            None => break Err(LexicalError::UnterminatedString { line }),
-                            Some(new_char) => {
-                                lexeme.push(new_char);
-                                if new_char == '\n' {
-                                    line += 1;
-                                } else if new_char == '"' {
-                                    break Ok(TokenKind::String);
-                                }
+                '"' => loop {
+                    match characters.next() {
+                        None => break Err(LexicalError::UnterminatedString { line }),
+                        Some(new_char) => {
+                            lexeme_end += 1;
+                            if new_char == '\n' {
+                                line += 1;
+                            } else if new_char == '"' {
+                                break Ok(TokenKind::String);
                             }
                         }
                     }
-                }
+                },
                 '!' => {
-                    lexeme.push(char);
-                    if let Some(c2) = characters.next_if_eq(&'=') {
-                        lexeme.push(c2);
+                    if characters.next_if_eq(&'=').is_some() {
+                        lexeme_end += 1;
                         Ok(TokenKind::BangEqual)
                     } else {
                         Ok(TokenKind::Bang)
                     }
                 }
                 '=' => {
-                    lexeme.push(char);
-                    if let Some(c2) = characters.next_if_eq(&'=') {
-                        lexeme.push(c2);
+                    if characters.next_if_eq(&'=').is_some() {
+                        lexeme_end += 1;
                         Ok(TokenKind::EqualEqual)
                     } else {
                         Ok(TokenKind::Equal)
                     }
                 }
                 '<' => {
-                    lexeme.push(char);
-                    if let Some(c2) = characters.next_if_eq(&'=') {
-                        lexeme.push(c2);
+                    if characters.next_if_eq(&'=').is_some() {
+                        lexeme_end += 1;
                         Ok(TokenKind::LessEqual)
                     } else {
                         Ok(TokenKind::Less)
                     }
                 }
                 '>' => {
-                    lexeme.push(char);
-                    if let Some(c2) = characters.next_if_eq(&'=') {
-                        lexeme.push(c2);
+                    if characters.next_if_eq(&'=').is_some() {
+                        lexeme_end += 1;
                         Ok(TokenKind::GreaterEqual)
                     } else {
                         Ok(TokenKind::Greater)
@@ -175,24 +138,30 @@ impl Scanner {
                 '/' => {
                     if characters.next_if_eq(&'/').is_some() {
                         // Discard comments
+                        lexeme_end += 1;
                         'comment: while let Some(c) = characters.peek() {
                             if *c == '\n' {
                                 // Newlines are handled separately, don't consume them here
                                 break 'comment;
                             } else {
                                 // Consume the comment itself
+                                lexeme_end += 1;
                                 characters.next();
                             }
                         }
+                        lexeme_start = lexeme_end;
                         continue;
                     } else {
-                        lexeme.push(char);
                         Ok(TokenKind::Slash)
                     }
                 }
-                '\t' | ' ' | '\r' => continue,
+                '\t' | ' ' | '\r' => {
+                    lexeme_start = lexeme_end;
+                    continue;
+                }
                 '\n' => {
                     line += 1;
+                    lexeme_start = lexeme_end;
                     continue;
                 }
                 _ => Err(LexicalError::UnexpectedCharacter { char, line }),
@@ -200,7 +169,8 @@ impl Scanner {
 
             let lex_result = match token_kind {
                 Ok(token_kind) => {
-                    let this_lexeme = mem::take(&mut lexeme);
+                    let this_lexeme = &source[lexeme_start..lexeme_end];
+                    lexeme_start = lexeme_end;
                     Ok(Token::new(token_kind, Some(this_lexeme), line))
                 }
                 Err(lexical_error) => Err(lexical_error),
@@ -222,27 +192,27 @@ mod test {
 
     #[test]
     fn scanning_single_character_lexemes_works() {
-        let input = "(){},.-+;=*!<>/".to_string();
+        let input = "(){},.-+;=*!<>/";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
-                Token::new(TokenKind::RightParen, Some(")".to_string()), 1),
-                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 1),
-                Token::new(TokenKind::RightBrace, Some("}".to_string()), 1),
-                Token::new(TokenKind::Comma, Some(",".to_string()), 1),
-                Token::new(TokenKind::Dot, Some(".".to_string()), 1),
-                Token::new(TokenKind::Minus, Some("-".to_string()), 1),
-                Token::new(TokenKind::Plus, Some("+".to_string()), 1),
-                Token::new(TokenKind::Semicolon, Some(";".to_string()), 1),
-                Token::new(TokenKind::Equal, Some("=".to_string()), 1),
-                Token::new(TokenKind::Star, Some("*".to_string()), 1),
-                Token::new(TokenKind::Bang, Some("!".to_string()), 1),
-                Token::new(TokenKind::Less, Some("<".to_string()), 1),
-                Token::new(TokenKind::Greater, Some(">".to_string()), 1),
-                Token::new(TokenKind::Slash, Some("/".to_string()), 1),
+                Token::new(TokenKind::LeftParen, Some("("), 1),
+                Token::new(TokenKind::RightParen, Some(")"), 1),
+                Token::new(TokenKind::LeftBrace, Some("{"), 1),
+                Token::new(TokenKind::RightBrace, Some("}"), 1),
+                Token::new(TokenKind::Comma, Some(","), 1),
+                Token::new(TokenKind::Dot, Some("."), 1),
+                Token::new(TokenKind::Minus, Some("-"), 1),
+                Token::new(TokenKind::Plus, Some("+"), 1),
+                Token::new(TokenKind::Semicolon, Some(";"), 1),
+                Token::new(TokenKind::Equal, Some("="), 1),
+                Token::new(TokenKind::Star, Some("*"), 1),
+                Token::new(TokenKind::Bang, Some("!"), 1),
+                Token::new(TokenKind::Less, Some("<"), 1),
+                Token::new(TokenKind::Greater, Some(">"), 1),
+                Token::new(TokenKind::Slash, Some("/"), 1),
                 Token::new(TokenKind::Eof, None, 1),
             ]
         )
@@ -250,20 +220,20 @@ mod test {
 
     #[test]
     fn scanning_double_character_lexemes_works() {
-        let input = " != <= >= == = =\n!\n=".to_string();
+        let input = " != <= >= == = =\n!\n=";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::BangEqual, Some("!=".to_string()), 1),
-                Token::new(TokenKind::LessEqual, Some("<=".to_string()), 1),
-                Token::new(TokenKind::GreaterEqual, Some(">=".to_string()), 1),
-                Token::new(TokenKind::EqualEqual, Some("==".to_string()), 1),
-                Token::new(TokenKind::Equal, Some("=".to_string()), 1),
-                Token::new(TokenKind::Equal, Some("=".to_string()), 1),
-                Token::new(TokenKind::Bang, Some("!".to_string()), 2),
-                Token::new(TokenKind::Equal, Some("=".to_string()), 3),
+                Token::new(TokenKind::BangEqual, Some("!="), 1),
+                Token::new(TokenKind::LessEqual, Some("<="), 1),
+                Token::new(TokenKind::GreaterEqual, Some(">="), 1),
+                Token::new(TokenKind::EqualEqual, Some("=="), 1),
+                Token::new(TokenKind::Equal, Some("="), 1),
+                Token::new(TokenKind::Equal, Some("="), 1),
+                Token::new(TokenKind::Bang, Some("!"), 2),
+                Token::new(TokenKind::Equal, Some("="), 3),
                 Token::new(TokenKind::Eof, None, 3),
             ]
         )
@@ -271,17 +241,17 @@ mod test {
 
     #[test]
     fn ignoring_whitespaces_works() {
-        let input = "(   \r)    {\t     }\n\n\n\n!".to_string();
+        let input = "(   \r)    {\t     }\n\n\n\n!";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
-                Token::new(TokenKind::RightParen, Some(")".to_string()), 1),
-                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 1),
-                Token::new(TokenKind::RightBrace, Some("}".to_string()), 1),
-                Token::new(TokenKind::Bang, Some("!".to_string()), 5),
+                Token::new(TokenKind::LeftParen, Some("("), 1),
+                Token::new(TokenKind::RightParen, Some(")"), 1),
+                Token::new(TokenKind::LeftBrace, Some("{"), 1),
+                Token::new(TokenKind::RightBrace, Some("}"), 1),
+                Token::new(TokenKind::Bang, Some("!"), 5),
                 Token::new(TokenKind::Eof, None, 5),
             ]
         )
@@ -289,17 +259,13 @@ mod test {
 
     #[test]
     fn scanning_basic_valid_strings_works() {
-        let input = "\"this is a string\"".to_string();
+        let input = "\"this is a string\"";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(
-                    TokenKind::String,
-                    Some(r#""this is a string""#.to_string()),
-                    1
-                ),
+                Token::new(TokenKind::String, Some(r#""this is a string""#), 1),
                 Token::new(TokenKind::Eof, None, 1),
             ]
         )
@@ -307,7 +273,7 @@ mod test {
 
     #[test]
     fn scanning_multiline_strings_works() {
-        let input = "\"this is a string\nacross multiple lines\"".to_string();
+        let input = "\"this is a string\nacross multiple lines\"";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
@@ -315,7 +281,7 @@ mod test {
             vec![
                 Token::new(
                     TokenKind::String,
-                    Some("\"this is a string\nacross multiple lines\"".to_string()),
+                    Some("\"this is a string\nacross multiple lines\""),
                     2
                 ),
                 Token::new(TokenKind::Eof, None, 2),
@@ -325,7 +291,7 @@ mod test {
 
     #[test]
     fn scanning_unterminated_string_produces_error() {
-        let input = "\"this is not a string".to_string();
+        let input = "\"this is not a string";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
@@ -339,15 +305,15 @@ mod test {
 
     #[test]
     fn scanning_valid_integer_works() {
-        let input = "  1 20 4212".to_string();
+        let input = "  1 20 4212";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number, Some("1".to_string()), 1)),
-                Ok(Token::new(TokenKind::Number, Some("20".to_string()), 1)),
-                Ok(Token::new(TokenKind::Number, Some("4212".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("1"), 1)),
+                Ok(Token::new(TokenKind::Number, Some("20"), 1)),
+                Ok(Token::new(TokenKind::Number, Some("4212"), 1)),
                 Ok(Token::new(TokenKind::Eof, None, 1)),
             ]
         )
@@ -355,15 +321,15 @@ mod test {
 
     #[test]
     fn scanning_valid_fractional_number_works() {
-        let input = "  0.0001 2.0 421.2".to_string();
+        let input = "  0.0001 2.0 421.2";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number, Some("0.0001".to_string()), 1)),
-                Ok(Token::new(TokenKind::Number, Some("2.0".to_string()), 1)),
-                Ok(Token::new(TokenKind::Number, Some("421.2".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("0.0001"), 1)),
+                Ok(Token::new(TokenKind::Number, Some("2.0"), 1)),
+                Ok(Token::new(TokenKind::Number, Some("421.2"), 1)),
                 Ok(Token::new(TokenKind::Eof, None, 1)),
             ]
         )
@@ -371,20 +337,20 @@ mod test {
 
     #[test]
     fn scanning_invalid_fractional_number_works() {
-        let input = "  0. 2123. .2 .0012".to_string();
+        let input = "  0. 2123. .2 .0012";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number, Some("0".to_string()), 1)),
-                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
-                Ok(Token::new(TokenKind::Number, Some("2123".to_string()), 1)),
-                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
-                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
-                Ok(Token::new(TokenKind::Number, Some("2".to_string()), 1)),
-                Ok(Token::new(TokenKind::Dot, Some(".".to_string()), 1)),
-                Ok(Token::new(TokenKind::Number, Some("0012".to_string()), 1)),
+                Ok(Token::new(TokenKind::Number, Some("0"), 1)),
+                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
+                Ok(Token::new(TokenKind::Number, Some("2123"), 1)),
+                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
+                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
+                Ok(Token::new(TokenKind::Number, Some("2"), 1)),
+                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
+                Ok(Token::new(TokenKind::Number, Some("0012"), 1)),
                 Ok(Token::new(TokenKind::Eof, None, 1)),
             ]
         )
@@ -392,24 +358,20 @@ mod test {
 
     #[test]
     fn scanning_identifiers_works() {
-        let input = "some_identifier _anotherOne als0 c1 0no 001_no ".to_string();
+        let input = "some_identifier _anotherOne als0 c1 0no 001_no ";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(
-                    TokenKind::Identifier,
-                    Some("some_identifier".to_string()),
-                    1
-                ),
-                Token::new(TokenKind::Identifier, Some("_anotherOne".to_string()), 1),
-                Token::new(TokenKind::Identifier, Some("als0".to_string()), 1),
-                Token::new(TokenKind::Identifier, Some("c1".to_string()), 1),
-                Token::new(TokenKind::Number, Some("0".to_string()), 1),
-                Token::new(TokenKind::Identifier, Some("no".to_string()), 1),
-                Token::new(TokenKind::Number, Some("001".to_string()), 1),
-                Token::new(TokenKind::Identifier, Some("_no".to_string()), 1),
+                Token::new(TokenKind::Identifier, Some("some_identifier"), 1),
+                Token::new(TokenKind::Identifier, Some("_anotherOne"), 1),
+                Token::new(TokenKind::Identifier, Some("als0"), 1),
+                Token::new(TokenKind::Identifier, Some("c1"), 1),
+                Token::new(TokenKind::Number, Some("0"), 1),
+                Token::new(TokenKind::Identifier, Some("no"), 1),
+                Token::new(TokenKind::Number, Some("001"), 1),
+                Token::new(TokenKind::Identifier, Some("_no"), 1),
                 Token::new(TokenKind::Eof, None, 1),
             ]
         )
@@ -417,29 +379,28 @@ mod test {
 
     #[test]
     fn scanning_reserved_words_works() {
-        let input = "and class else false for fun if nil or print return super this true var while"
-            .to_string();
+        let input = "and class else false for fun if nil or print return super this true var while";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::And, Some("and".to_string()), 1),
-                Token::new(TokenKind::Class, Some("class".to_string()), 1),
-                Token::new(TokenKind::Else, Some("else".to_string()), 1),
-                Token::new(TokenKind::False, Some("false".to_string()), 1),
-                Token::new(TokenKind::For, Some("for".to_string()), 1),
-                Token::new(TokenKind::Fun, Some("fun".to_string()), 1),
-                Token::new(TokenKind::If, Some("if".to_string()), 1),
-                Token::new(TokenKind::Nil, Some("nil".to_string()), 1),
-                Token::new(TokenKind::Or, Some("or".to_string()), 1),
-                Token::new(TokenKind::Print, Some("print".to_string()), 1),
-                Token::new(TokenKind::Return, Some("return".to_string()), 1),
-                Token::new(TokenKind::Super, Some("super".to_string()), 1),
-                Token::new(TokenKind::This, Some("this".to_string()), 1),
-                Token::new(TokenKind::True, Some("true".to_string()), 1),
-                Token::new(TokenKind::Var, Some("var".to_string()), 1),
-                Token::new(TokenKind::While, Some("while".to_string()), 1),
+                Token::new(TokenKind::And, Some("and"), 1),
+                Token::new(TokenKind::Class, Some("class"), 1),
+                Token::new(TokenKind::Else, Some("else"), 1),
+                Token::new(TokenKind::False, Some("false"), 1),
+                Token::new(TokenKind::For, Some("for"), 1),
+                Token::new(TokenKind::Fun, Some("fun"), 1),
+                Token::new(TokenKind::If, Some("if"), 1),
+                Token::new(TokenKind::Nil, Some("nil"), 1),
+                Token::new(TokenKind::Or, Some("or"), 1),
+                Token::new(TokenKind::Print, Some("print"), 1),
+                Token::new(TokenKind::Return, Some("return"), 1),
+                Token::new(TokenKind::Super, Some("super"), 1),
+                Token::new(TokenKind::This, Some("this"), 1),
+                Token::new(TokenKind::True, Some("true"), 1),
+                Token::new(TokenKind::Var, Some("var"), 1),
+                Token::new(TokenKind::While, Some("while"), 1),
                 Token::new(TokenKind::Eof, None, 1),
             ]
         )
@@ -447,16 +408,16 @@ mod test {
 
     #[test]
     fn scanning_multiple_lines_works() {
-        let input = "(\n)\n{\n}\n".to_string();
+        let input = "(\n)\n{\n}\n";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
-                Token::new(TokenKind::RightParen, Some(")".to_string()), 2),
-                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 3),
-                Token::new(TokenKind::RightBrace, Some("}".to_string()), 4),
+                Token::new(TokenKind::LeftParen, Some("("), 1),
+                Token::new(TokenKind::RightParen, Some(")"), 2),
+                Token::new(TokenKind::LeftBrace, Some("{"), 3),
+                Token::new(TokenKind::RightBrace, Some("}"), 4),
                 Token::new(TokenKind::Eof, None, 5),
             ]
         )
@@ -464,16 +425,16 @@ mod test {
 
     #[test]
     fn scanning_comments_works() {
-        let input = "() // this is a comment\n{} // another one".to_string();
+        let input = "() // this is a comment\n{} // another one";
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
             tokens.0.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("(".to_string()), 1),
-                Token::new(TokenKind::RightParen, Some(")".to_string()), 1),
-                Token::new(TokenKind::LeftBrace, Some("{".to_string()), 2),
-                Token::new(TokenKind::RightBrace, Some("}".to_string()), 2),
+                Token::new(TokenKind::LeftParen, Some("("), 1),
+                Token::new(TokenKind::RightParen, Some(")"), 1),
+                Token::new(TokenKind::LeftBrace, Some("{"), 2),
+                Token::new(TokenKind::RightBrace, Some("}"), 2),
                 Token::new(TokenKind::Eof, None, 2),
             ]
         )
