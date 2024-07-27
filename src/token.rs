@@ -7,14 +7,14 @@ pub(crate) type LexResult = Result<Token, LexicalError>;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-pub struct Token {
+pub(crate) struct Token {
     kind: TokenKind,
     lexeme: Option<String>,
     line: usize,
 }
 
 impl Token {
-    pub fn new(
+    pub(crate) fn new(
         kind: TokenKind,
         lexeme: Option<String>,
         line: usize,
@@ -29,7 +29,7 @@ impl Token {
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-pub enum TokenKind {
+pub(crate) enum TokenKind {
     // Single-character tokens
     LeftParen,
     RightParen,
