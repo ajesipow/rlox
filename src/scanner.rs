@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-
 use itertools::peek_nth;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::iter::Fuse;
 
 use crate::error::LexicalError;
 use crate::token::Token;
@@ -40,7 +40,8 @@ impl Scanner {
         let mut line = 1;
 
         // TODO: Iterates over Unicode Scalar Values instead of grapheme clusters.
-        let mut characters = peek_nth(source.chars());
+        // TODO the indexed iterator doesn't do anything
+        let mut characters = peek_nth(indexed_iterator(source.chars()));
         while let Some(char) = characters.next() {
             lexeme_end += 1;
             let token_kind = match char {
@@ -181,6 +182,34 @@ impl Scanner {
         tokens.push(Ok(Token::new(TokenKind::Eof, None, line)));
 
         Tokens(tokens)
+    }
+}
+
+
+pub(crate) fn indexed_iterator<I>(iterable: I) -> IndexedIterator<I::IntoIter> where I: IntoIterator {
+    IndexedIterator {
+        current_idx: 0,
+        iter: iterable.into_iter().fuse(),
+    }
+}
+
+pub(crate) struct IndexedIterator<T> {
+    current_idx: usize,
+    iter: Fuse<T>,
+}
+
+impl<I> IndexedIterator<I> {
+    pub(crate) fn current_idx(&self) -> usize {
+        self.current_idx
+    }
+}
+
+impl<T, U> Iterator for IndexedIterator<T> where T: Iterator<Item=U> {
+    type Item = U;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current_idx += 1;
+        self.iter.next()
     }
 }
 
