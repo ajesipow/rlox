@@ -1,6 +1,8 @@
-use itertools::{peek_nth, PeekNth};
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
+
+use itertools::peek_nth;
+use itertools::PeekNth;
+use once_cell::sync::Lazy;
 
 use crate::error::LexicalError;
 use crate::token::Token;
@@ -35,14 +37,11 @@ impl Scanner {
     pub(crate) fn scan_tokens(source: &str) -> Tokens {
         let mut tokens = vec![];
         let mut lexeme_start = 0;
-        let mut lexeme_end = lexeme_start;
         let mut line = 1;
 
         // TODO: Iterates over Unicode Scalar Values instead of grapheme clusters.
-        // TODO the indexed iterator doesn't do anything
         let mut characters = indexed_iterator(peek_nth(source.chars()));
         while let Some(char) = characters.next() {
-            lexeme_end += 1;
             let token_kind = match char {
                 '(' => Ok(TokenKind::LeftParen),
                 ')' => Ok(TokenKind::RightParen),
@@ -58,12 +57,10 @@ impl Scanner {
                     while characters
                         .next_if(|c| c.is_ascii_alphanumeric() || *c == '_')
                         .is_some()
-                    {
-                        lexeme_end += 1;
-                    }
+                    {}
 
                     if let Some(token_kind) =
-                        RESERVED_KEYWORDS.get(&source[lexeme_start..lexeme_end])
+                        RESERVED_KEYWORDS.get(&source[lexeme_start..characters.current_idx()])
                     {
                         Ok(*token_kind)
                     } else {
@@ -71,19 +68,14 @@ impl Scanner {
                     }
                 }
                 c if c.is_ascii_digit() => {
-                    while characters.next_if(|c| c.is_ascii_digit()).is_some() {
-                        lexeme_end += 1;
-                    }
+                    while characters.next_if(|c| c.is_ascii_digit()).is_some() {}
 
                     if let Some('.') = characters.peek() {
                         match characters.peek_nth(1) {
                             Some(c) if c.is_ascii_digit() => {
                                 // Consume the '.'
                                 characters.next();
-                                lexeme_end += 1;
-                                while characters.next_if(|c| c.is_ascii_digit()).is_some() {
-                                    lexeme_end += 1;
-                                }
+                                while characters.next_if(|c| c.is_ascii_digit()).is_some() {}
                             }
                             _ => (),
                         }
@@ -94,7 +86,6 @@ impl Scanner {
                     match characters.next() {
                         None => break Err(LexicalError::UnterminatedString { line }),
                         Some(new_char) => {
-                            lexeme_end += 1;
                             if new_char == '\n' {
                                 line += 1;
                             } else if new_char == '"' {
@@ -105,7 +96,6 @@ impl Scanner {
                 },
                 '!' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        lexeme_end += 1;
                         Ok(TokenKind::BangEqual)
                     } else {
                         Ok(TokenKind::Bang)
@@ -113,7 +103,6 @@ impl Scanner {
                 }
                 '=' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        lexeme_end += 1;
                         Ok(TokenKind::EqualEqual)
                     } else {
                         Ok(TokenKind::Equal)
@@ -121,7 +110,6 @@ impl Scanner {
                 }
                 '<' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        lexeme_end += 1;
                         Ok(TokenKind::LessEqual)
                     } else {
                         Ok(TokenKind::Less)
@@ -129,7 +117,6 @@ impl Scanner {
                 }
                 '>' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        lexeme_end += 1;
                         Ok(TokenKind::GreaterEqual)
                     } else {
                         Ok(TokenKind::Greater)
@@ -138,30 +125,29 @@ impl Scanner {
                 '/' => {
                     if characters.next_if_eq(&'/').is_some() {
                         // Discard comments
-                        lexeme_end += 1;
+
                         'comment: while let Some(c) = characters.peek() {
                             if *c == '\n' {
                                 // Newlines are handled separately, don't consume them here
                                 break 'comment;
                             } else {
                                 // Consume the comment itself
-                                lexeme_end += 1;
                                 characters.next();
                             }
                         }
-                        lexeme_start = lexeme_end;
+                        lexeme_start = characters.current_idx();
                         continue;
                     } else {
                         Ok(TokenKind::Slash)
                     }
                 }
                 '\t' | ' ' | '\r' => {
-                    lexeme_start = lexeme_end;
+                    lexeme_start = characters.current_idx();
                     continue;
                 }
                 '\n' => {
                     line += 1;
-                    lexeme_start = lexeme_end;
+                    lexeme_start = characters.current_idx();
                     continue;
                 }
                 _ => Err(LexicalError::UnexpectedCharacter { char, line }),
@@ -169,8 +155,8 @@ impl Scanner {
 
             let lex_result = match token_kind {
                 Ok(token_kind) => {
-                    let this_lexeme = &source[lexeme_start..lexeme_end];
-                    lexeme_start = lexeme_end;
+                    let this_lexeme = &source[lexeme_start..characters.current_idx()];
+                    lexeme_start = characters.current_idx();
                     Ok(Token::new(token_kind, Some(this_lexeme), line))
                 }
                 Err(lexical_error) => Err(lexical_error),
