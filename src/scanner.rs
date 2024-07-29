@@ -1,7 +1,6 @@
-use itertools::peek_nth;
+use itertools::{peek_nth, PeekNth};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::iter::Fuse;
 
 use crate::error::LexicalError;
 use crate::token::Token;
@@ -41,7 +40,7 @@ impl Scanner {
 
         // TODO: Iterates over Unicode Scalar Values instead of grapheme clusters.
         // TODO the indexed iterator doesn't do anything
-        let mut characters = peek_nth(indexed_iterator(source.chars()));
+        let mut characters = indexed_iterator(peek_nth(source.chars()));
         while let Some(char) = characters.next() {
             lexeme_end += 1;
             let token_kind = match char {
@@ -185,26 +184,71 @@ impl Scanner {
     }
 }
 
-
-pub(crate) fn indexed_iterator<I>(iterable: I) -> IndexedIterator<I::IntoIter> where I: IntoIterator {
-    IndexedIterator {
+pub(crate) fn indexed_iterator<I>(iterable: PeekNth<I>) -> IndexedPeekNth<I>
+where
+    I: Iterator,
+{
+    IndexedPeekNth {
         current_idx: 0,
-        iter: iterable.into_iter().fuse(),
+        iter: iterable,
     }
 }
 
-pub(crate) struct IndexedIterator<T> {
+pub(crate) struct IndexedPeekNth<I: Iterator> {
     current_idx: usize,
-    iter: Fuse<T>,
+    iter: PeekNth<I>,
 }
 
-impl<I> IndexedIterator<I> {
+impl<I> IndexedPeekNth<I>
+where
+    I: Iterator,
+{
     pub(crate) fn current_idx(&self) -> usize {
         self.current_idx
     }
+
+    fn next_if(
+        &mut self,
+        func: impl FnOnce(&I::Item) -> bool,
+    ) -> Option<I::Item> {
+        let item = self.iter.next_if(func);
+        if item.is_some() {
+            self.current_idx += 1;
+        }
+        item
+    }
+
+    fn next_if_eq<T>(
+        &mut self,
+        expected: &T,
+    ) -> Option<I::Item>
+    where
+        T: ?Sized,
+        I::Item: PartialEq<T>,
+    {
+        let item = self.iter.next_if_eq(expected);
+        if item.is_some() {
+            self.current_idx += 1;
+        }
+        item
+    }
+
+    fn peek(&mut self) -> Option<&I::Item> {
+        self.iter.peek()
+    }
+
+    fn peek_nth(
+        &mut self,
+        n: usize,
+    ) -> Option<&I::Item> {
+        self.iter.peek_nth(n)
+    }
 }
 
-impl<T, U> Iterator for IndexedIterator<T> where T: Iterator<Item=U> {
+impl<I, U> Iterator for IndexedPeekNth<I>
+where
+    I: Iterator<Item = U>,
+{
     type Item = U;
 
     fn next(&mut self) -> Option<Self::Item> {
