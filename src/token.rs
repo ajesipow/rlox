@@ -1,7 +1,22 @@
 use crate::error::LexicalError;
 
 #[derive(Debug)]
-pub struct Tokens<'a>(pub(crate) Vec<LexResult<'a>>);
+pub(crate) struct Tokens<'a>(Vec<LexResult<'a>>);
+
+impl<'a> Tokens<'a> {
+    pub fn new(tokens: Vec<LexResult<'a>>) -> Self {
+        Self(tokens)
+    }
+}
+
+impl<'a> IntoIterator for Tokens<'a> {
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type Item = LexResult<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 pub(crate) type LexResult<'a> = Result<Token<'a>, LexicalError>;
 
@@ -25,10 +40,13 @@ impl<'a> Token<'a> {
     pub(crate) fn lexeme(&self) -> Option<&str> {
         self.lexeme
     }
+
+    pub(crate) fn kind(&self) -> TokenKind {
+        self.kind
+    }
 }
 
-#[derive(Debug, Copy, Clone)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum TokenKind {
     // Single-character tokens
     LeftParen,

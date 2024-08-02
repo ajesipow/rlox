@@ -14,7 +14,10 @@ pub(crate) enum Expr<'a> {
     Grouping {
         expression: Box<Expr<'a>>,
     },
-    Literal(String),
+    StringLiteral(&'a str),
+    BooleanLiteral(bool),
+    NoneLiteral,
+    NumberLiteral(f64),
 }
 
 pub(crate) trait Visitor<T> {

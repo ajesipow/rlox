@@ -1,6 +1,7 @@
 mod ast;
 pub mod error;
 mod io;
+mod parser;
 mod run;
 mod scanner;
 mod token;

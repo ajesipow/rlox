@@ -166,7 +166,7 @@ impl Scanner {
 
         tokens.push(Ok(Token::new(TokenKind::Eof, None, line)));
 
-        Tokens(tokens)
+        Tokens::new(tokens)
     }
 }
 
@@ -255,7 +255,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::LeftParen, Some("("), 1),
                 Token::new(TokenKind::RightParen, Some(")"), 1),
@@ -283,7 +283,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::BangEqual, Some("!="), 1),
                 Token::new(TokenKind::LessEqual, Some("<="), 1),
@@ -304,7 +304,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::LeftParen, Some("("), 1),
                 Token::new(TokenKind::RightParen, Some(")"), 1),
@@ -322,7 +322,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::String, Some(r#""this is a string""#), 1),
                 Token::new(TokenKind::Eof, None, 1),
@@ -336,7 +336,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(
                     TokenKind::String,
@@ -354,7 +354,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().collect_vec(),
+            tokens.into_iter().collect_vec(),
             vec![
                 Err(LexicalError::UnterminatedString { line: 1 }),
                 Ok(Token::new(TokenKind::Eof, None, 1)),
@@ -368,7 +368,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().collect_vec(),
+            tokens.into_iter().collect_vec(),
             vec![
                 Ok(Token::new(TokenKind::Number, Some("1"), 1)),
                 Ok(Token::new(TokenKind::Number, Some("20"), 1)),
@@ -384,7 +384,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().collect_vec(),
+            tokens.into_iter().collect_vec(),
             vec![
                 Ok(Token::new(TokenKind::Number, Some("0.0001"), 1)),
                 Ok(Token::new(TokenKind::Number, Some("2.0"), 1)),
@@ -400,7 +400,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().collect_vec(),
+            tokens.into_iter().collect_vec(),
             vec![
                 Ok(Token::new(TokenKind::Number, Some("0"), 1)),
                 Ok(Token::new(TokenKind::Dot, Some("."), 1)),
@@ -421,7 +421,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::Identifier, Some("some_identifier"), 1),
                 Token::new(TokenKind::Identifier, Some("_anotherOne"), 1),
@@ -442,7 +442,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::And, Some("and"), 1),
                 Token::new(TokenKind::Class, Some("class"), 1),
@@ -471,7 +471,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::LeftParen, Some("("), 1),
                 Token::new(TokenKind::RightParen, Some(")"), 2),
@@ -488,7 +488,7 @@ mod test {
         let tokens = Scanner::scan_tokens(input);
 
         assert_eq!(
-            tokens.0.into_iter().flatten().collect_vec(),
+            tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(TokenKind::LeftParen, Some("("), 1),
                 Token::new(TokenKind::RightParen, Some(")"), 1),
