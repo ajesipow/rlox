@@ -37,6 +37,10 @@ impl<'a> Token<'a> {
     pub(crate) fn kind(&self) -> TokenKind<'a> {
         self.kind
     }
+
+    pub(crate) fn line(&self) -> usize {
+        self.line
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

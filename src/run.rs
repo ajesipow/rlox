@@ -2,7 +2,7 @@ use std::io;
 use std::io::Write;
 
 use crate::error::Error;
-use crate::scanner::Lexer;
+use crate::lexer::Lexer;
 
 pub fn run_prompt() -> Result<(), Error> {
     let mut buf = String::new();

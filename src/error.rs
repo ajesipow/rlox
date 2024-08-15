@@ -20,3 +20,19 @@ pub enum LexicalError {
     #[error("cannot parse number on line {line:?}")]
     NaN { line: usize },
 }
+
+#[derive(Debug, Error)]
+pub enum ParseError {
+    #[error("expected ')' after expression on line {line:?}")]
+    ExpectedClosingParenAfterExpr { line: usize },
+    #[error("unexpected EOF")]
+    UnexpectedEof,
+    #[error("internal parser error")]
+    Internal(#[from] ParseErrorInternal),
+}
+
+#[derive(Debug, Error)]
+pub enum ParseErrorInternal {
+    #[error("unhandled token on line {line:?}")]
+    UnhandledToken { line: usize },
+}

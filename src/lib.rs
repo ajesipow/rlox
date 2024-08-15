@@ -1,9 +1,9 @@
 mod ast;
 pub mod error;
 mod io;
+mod lexer;
 mod parser;
 mod run;
-mod scanner;
 mod token;
 
 pub use io::read_source_file;
