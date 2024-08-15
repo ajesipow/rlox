@@ -17,4 +17,6 @@ pub enum LexicalError {
     UnexpectedCharacter { char: char, line: usize },
     #[error("unterminated string on line {line:?}")]
     UnterminatedString { line: usize },
+    #[error("cannot parse number on line {line:?}")]
+    NaN { line: usize },
 }

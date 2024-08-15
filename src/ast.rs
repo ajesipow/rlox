@@ -1,6 +1,7 @@
 use crate::token::Token;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Expr<'a> {
     Binary {
         left: Box<Expr<'a>>,

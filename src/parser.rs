@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
-                TokenKind::BangEqual | TokenKind::EqualEqual => {
+                TokenKind::BangEqual { .. } | TokenKind::EqualEqual { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.comparison();
                     return Expr::Binary {
@@ -50,10 +50,10 @@ impl<'a> Parser<'a> {
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
-                TokenKind::Greater
-                | TokenKind::GreaterEqual
-                | TokenKind::Less
-                | TokenKind::LessEqual => {
+                TokenKind::Greater { .. }
+                | TokenKind::GreaterEqual { .. }
+                | TokenKind::Less { .. }
+                | TokenKind::LessEqual { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.term();
                     return Expr::Binary {
@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
-                TokenKind::Minus | TokenKind::Plus => {
+                TokenKind::Minus { .. } | TokenKind::Plus { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.factor();
                     return Expr::Binary {
@@ -95,7 +95,7 @@ impl<'a> Parser<'a> {
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
-                TokenKind::Star | TokenKind::Slash => {
+                TokenKind::Star { .. } | TokenKind::Slash { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.unary();
                     return Expr::Binary {
@@ -114,7 +114,7 @@ impl<'a> Parser<'a> {
     fn unary(&mut self) -> Expr<'a> {
         if let Some(token) = self.tokens.peek() {
             match token.kind() {
-                TokenKind::Bang | TokenKind::Minus => {
+                TokenKind::Bang { .. } | TokenKind::Minus { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.unary();
                     return Expr::Unary {
@@ -131,16 +131,15 @@ impl<'a> Parser<'a> {
     fn primary(&mut self) -> Expr<'a> {
         if let Some(token) = self.tokens.next() {
             return match token.kind() {
-                TokenKind::True => Expr::BooleanLiteral(true),
-                TokenKind::False => Expr::BooleanLiteral(false),
-                TokenKind::Nil => Expr::NoneLiteral,
-                // TODO make TokenKind accept value in variant
-                TokenKind::Number => Expr::NumberLiteral(0.0),
-                TokenKind::String => Expr::StringLiteral("a"),
-                TokenKind::LeftParen => {
+                TokenKind::True { .. } => Expr::BooleanLiteral(true),
+                TokenKind::False { .. } => Expr::BooleanLiteral(false),
+                TokenKind::Nil { .. } => Expr::NoneLiteral,
+                TokenKind::Number { lexeme } => Expr::NumberLiteral(lexeme),
+                TokenKind::String { lexeme } => Expr::StringLiteral(lexeme),
+                TokenKind::LeftParen { .. } => {
                     let expr = self.expression();
                     if let Some(next_token) = self.tokens.next() {
-                        if next_token.kind() != TokenKind::RightParen {
+                        if !matches!(next_token.kind(), TokenKind::RightParen { .. }) {
                             panic!("expected ')' after expression")
                         }
                     } else {
@@ -161,16 +160,32 @@ impl<'a> Parser<'a> {
 mod tests {
     use itertools::Itertools;
 
+    use crate::ast::Expr;
     use crate::parser::Parser;
-    use crate::scanner::Scanner;
+    use crate::scanner::Lexer;
+    use crate::token::Token;
+    use crate::token::TokenKind;
 
     #[test]
     fn test_basic_parser() {
         let input = "(1 + 2) * 3";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec().into_iter());
         let ast = parser.parse();
-        println!("{ast:#?}");
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                left: Box::new(Expr::Grouping {
+                    expression: Box::new(Expr::Binary {
+                        left: Box::new(Expr::NumberLiteral(1.0)),
+                        operator: Token::new(TokenKind::Plus { lexeme: "+" }, 1),
+                        right: Box::new(Expr::NumberLiteral(2.0)),
+                    })
+                }),
+                operator: Token::new(TokenKind::Star { lexeme: "*" }, 1),
+                right: Box::new(Expr::NumberLiteral(3.0)),
+            }
+        )
     }
 }

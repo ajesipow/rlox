@@ -11,30 +11,30 @@ use crate::token::Tokens;
 
 static RESERVED_KEYWORDS: Lazy<HashMap<&str, TokenKind>> = Lazy::new(|| {
     HashMap::from_iter([
-        ("and", TokenKind::And),
-        ("class", TokenKind::Class),
-        ("else", TokenKind::Else),
-        ("false", TokenKind::False),
-        ("for", TokenKind::For),
-        ("fun", TokenKind::Fun),
-        ("if", TokenKind::If),
-        ("nil", TokenKind::Nil),
-        ("or", TokenKind::Or),
-        ("print", TokenKind::Print),
-        ("return", TokenKind::Return),
-        ("super", TokenKind::Super),
-        ("this", TokenKind::This),
-        ("true", TokenKind::True),
-        ("var", TokenKind::Var),
-        ("while", TokenKind::While),
+        ("and", TokenKind::And { lexeme: "and" }),
+        ("class", TokenKind::Class { lexeme: "class" }),
+        ("else", TokenKind::Else { lexeme: "else" }),
+        ("false", TokenKind::False { lexeme: "false" }),
+        ("for", TokenKind::For { lexeme: "for" }),
+        ("fun", TokenKind::Fun { lexeme: "fun" }),
+        ("if", TokenKind::If { lexeme: "if" }),
+        ("nil", TokenKind::Nil { lexeme: "nil" }),
+        ("or", TokenKind::Or { lexeme: "or" }),
+        ("print", TokenKind::Print { lexeme: "print" }),
+        ("return", TokenKind::Return { lexeme: "return" }),
+        ("super", TokenKind::Super { lexeme: "super" }),
+        ("this", TokenKind::This { lexeme: "this" }),
+        ("true", TokenKind::True { lexeme: "true" }),
+        ("var", TokenKind::Var { lexeme: "var" }),
+        ("while", TokenKind::While { lexeme: "while" }),
     ])
 });
 
 #[derive(Debug)]
-pub(crate) struct Scanner;
+pub(crate) struct Lexer;
 
-impl Scanner {
-    pub(crate) fn scan_tokens(source: &str) -> Tokens {
+impl Lexer {
+    pub(crate) fn lex(source: &str) -> Tokens {
         let mut tokens = vec![];
         let mut lexeme_start = 0;
         let mut line = 1;
@@ -43,16 +43,36 @@ impl Scanner {
         let mut characters = indexed_iterator(peek_nth(source.chars()));
         while let Some(char) = characters.next() {
             let token_kind = match char {
-                '(' => Ok(TokenKind::LeftParen),
-                ')' => Ok(TokenKind::RightParen),
-                '{' => Ok(TokenKind::LeftBrace),
-                '}' => Ok(TokenKind::RightBrace),
-                ',' => Ok(TokenKind::Comma),
-                '.' => Ok(TokenKind::Dot),
-                '-' => Ok(TokenKind::Minus),
-                '+' => Ok(TokenKind::Plus),
-                ';' => Ok(TokenKind::Semicolon),
-                '*' => Ok(TokenKind::Star),
+                '(' => Ok(TokenKind::LeftParen {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                ')' => Ok(TokenKind::RightParen {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                '{' => Ok(TokenKind::LeftBrace {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                '}' => Ok(TokenKind::RightBrace {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                ',' => Ok(TokenKind::Comma {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                '.' => Ok(TokenKind::Dot {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                '-' => Ok(TokenKind::Minus {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                '+' => Ok(TokenKind::Plus {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                ';' => Ok(TokenKind::Semicolon {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
+                '*' => Ok(TokenKind::Star {
+                    lexeme: &source[lexeme_start..characters.current_idx()],
+                }),
                 c if c.is_ascii_alphabetic() || c == '_' => {
                     while characters
                         .next_if(|c| c.is_ascii_alphanumeric() || *c == '_')
@@ -64,7 +84,9 @@ impl Scanner {
                     {
                         Ok(*token_kind)
                     } else {
-                        Ok(TokenKind::Identifier)
+                        Ok(TokenKind::Identifier {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     }
                 }
                 c if c.is_ascii_digit() => {
@@ -80,7 +102,10 @@ impl Scanner {
                             _ => (),
                         }
                     }
-                    Ok(TokenKind::Number)
+                    match &source[lexeme_start..characters.current_idx()].parse::<f64>() {
+                        Ok(v) => Ok(TokenKind::Number { lexeme: *v }),
+                        Err(_) => Err(LexicalError::NaN { line }),
+                    }
                 }
                 '"' => loop {
                     match characters.next() {
@@ -89,43 +114,60 @@ impl Scanner {
                             if new_char == '\n' {
                                 line += 1;
                             } else if new_char == '"' {
-                                break Ok(TokenKind::String);
+                                break Ok(TokenKind::String {
+                                    lexeme: &source[lexeme_start..characters.current_idx()],
+                                });
                             }
                         }
                     }
                 },
                 '!' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::BangEqual)
+                        Ok(TokenKind::BangEqual {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     } else {
-                        Ok(TokenKind::Bang)
+                        Ok(TokenKind::Bang {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     }
                 }
                 '=' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::EqualEqual)
+                        Ok(TokenKind::EqualEqual {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     } else {
-                        Ok(TokenKind::Equal)
+                        Ok(TokenKind::Equal {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     }
                 }
                 '<' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::LessEqual)
+                        Ok(TokenKind::LessEqual {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     } else {
-                        Ok(TokenKind::Less)
+                        Ok(TokenKind::Less {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     }
                 }
                 '>' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::GreaterEqual)
+                        Ok(TokenKind::GreaterEqual {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     } else {
-                        Ok(TokenKind::Greater)
+                        Ok(TokenKind::Greater {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     }
                 }
                 '/' => {
                     if characters.next_if_eq(&'/').is_some() {
                         // Discard comments
-
                         'comment: while let Some(c) = characters.peek() {
                             if *c == '\n' {
                                 // Newlines are handled separately, don't consume them here
@@ -138,7 +180,9 @@ impl Scanner {
                         lexeme_start = characters.current_idx();
                         continue;
                     } else {
-                        Ok(TokenKind::Slash)
+                        Ok(TokenKind::Slash {
+                            lexeme: &source[lexeme_start..characters.current_idx()],
+                        })
                     }
                 }
                 '\t' | ' ' | '\r' => {
@@ -155,16 +199,15 @@ impl Scanner {
 
             let lex_result = match token_kind {
                 Ok(token_kind) => {
-                    let this_lexeme = &source[lexeme_start..characters.current_idx()];
                     lexeme_start = characters.current_idx();
-                    Ok(Token::new(token_kind, Some(this_lexeme), line))
+                    Ok(Token::new(token_kind, line))
                 }
                 Err(lexical_error) => Err(lexical_error),
             };
             tokens.push(lex_result);
         }
 
-        tokens.push(Ok(Token::new(TokenKind::Eof, None, line)));
+        tokens.push(Ok(Token::new(TokenKind::Eof, line)));
 
         Tokens::new(tokens)
     }
@@ -252,27 +295,27 @@ mod test {
     #[test]
     fn scanning_single_character_lexemes_works() {
         let input = "(){},.-+;=*!<>/";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("("), 1),
-                Token::new(TokenKind::RightParen, Some(")"), 1),
-                Token::new(TokenKind::LeftBrace, Some("{"), 1),
-                Token::new(TokenKind::RightBrace, Some("}"), 1),
-                Token::new(TokenKind::Comma, Some(","), 1),
-                Token::new(TokenKind::Dot, Some("."), 1),
-                Token::new(TokenKind::Minus, Some("-"), 1),
-                Token::new(TokenKind::Plus, Some("+"), 1),
-                Token::new(TokenKind::Semicolon, Some(";"), 1),
-                Token::new(TokenKind::Equal, Some("="), 1),
-                Token::new(TokenKind::Star, Some("*"), 1),
-                Token::new(TokenKind::Bang, Some("!"), 1),
-                Token::new(TokenKind::Less, Some("<"), 1),
-                Token::new(TokenKind::Greater, Some(">"), 1),
-                Token::new(TokenKind::Slash, Some("/"), 1),
-                Token::new(TokenKind::Eof, None, 1),
+                Token::new(TokenKind::LeftParen { lexeme: "(" }, 1),
+                Token::new(TokenKind::RightParen { lexeme: ")" }, 1),
+                Token::new(TokenKind::LeftBrace { lexeme: "{" }, 1),
+                Token::new(TokenKind::RightBrace { lexeme: "}" }, 1),
+                Token::new(TokenKind::Comma { lexeme: "," }, 1),
+                Token::new(TokenKind::Dot { lexeme: "." }, 1),
+                Token::new(TokenKind::Minus { lexeme: "-" }, 1),
+                Token::new(TokenKind::Plus { lexeme: "+" }, 1),
+                Token::new(TokenKind::Semicolon { lexeme: ";" }, 1),
+                Token::new(TokenKind::Equal { lexeme: "=" }, 1),
+                Token::new(TokenKind::Star { lexeme: "*" }, 1),
+                Token::new(TokenKind::Bang { lexeme: "!" }, 1),
+                Token::new(TokenKind::Less { lexeme: "<" }, 1),
+                Token::new(TokenKind::Greater { lexeme: ">" }, 1),
+                Token::new(TokenKind::Slash { lexeme: "/" }, 1),
+                Token::new(TokenKind::Eof, 1),
             ]
         )
     }
@@ -280,20 +323,20 @@ mod test {
     #[test]
     fn scanning_double_character_lexemes_works() {
         let input = " != <= >= == = =\n!\n=";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::BangEqual, Some("!="), 1),
-                Token::new(TokenKind::LessEqual, Some("<="), 1),
-                Token::new(TokenKind::GreaterEqual, Some(">="), 1),
-                Token::new(TokenKind::EqualEqual, Some("=="), 1),
-                Token::new(TokenKind::Equal, Some("="), 1),
-                Token::new(TokenKind::Equal, Some("="), 1),
-                Token::new(TokenKind::Bang, Some("!"), 2),
-                Token::new(TokenKind::Equal, Some("="), 3),
-                Token::new(TokenKind::Eof, None, 3),
+                Token::new(TokenKind::BangEqual { lexeme: "!=" }, 1),
+                Token::new(TokenKind::LessEqual { lexeme: "<=" }, 1),
+                Token::new(TokenKind::GreaterEqual { lexeme: ">=" }, 1),
+                Token::new(TokenKind::EqualEqual { lexeme: "==" }, 1),
+                Token::new(TokenKind::Equal { lexeme: "=" }, 1),
+                Token::new(TokenKind::Equal { lexeme: "=" }, 1),
+                Token::new(TokenKind::Bang { lexeme: "!" }, 2),
+                Token::new(TokenKind::Equal { lexeme: "=" }, 3),
+                Token::new(TokenKind::Eof, 3),
             ]
         )
     }
@@ -301,17 +344,17 @@ mod test {
     #[test]
     fn ignoring_whitespaces_works() {
         let input = "(   \r)    {\t     }\n\n\n\n!";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("("), 1),
-                Token::new(TokenKind::RightParen, Some(")"), 1),
-                Token::new(TokenKind::LeftBrace, Some("{"), 1),
-                Token::new(TokenKind::RightBrace, Some("}"), 1),
-                Token::new(TokenKind::Bang, Some("!"), 5),
-                Token::new(TokenKind::Eof, None, 5),
+                Token::new(TokenKind::LeftParen { lexeme: "(" }, 1),
+                Token::new(TokenKind::RightParen { lexeme: ")" }, 1),
+                Token::new(TokenKind::LeftBrace { lexeme: "{" }, 1),
+                Token::new(TokenKind::RightBrace { lexeme: "}" }, 1),
+                Token::new(TokenKind::Bang { lexeme: "!" }, 5),
+                Token::new(TokenKind::Eof, 5),
             ]
         )
     }
@@ -319,13 +362,18 @@ mod test {
     #[test]
     fn scanning_basic_valid_strings_works() {
         let input = "\"this is a string\"";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::String, Some(r#""this is a string""#), 1),
-                Token::new(TokenKind::Eof, None, 1),
+                Token::new(
+                    TokenKind::String {
+                        lexeme: r#""this is a string""#
+                    },
+                    1
+                ),
+                Token::new(TokenKind::Eof, 1),
             ]
         )
     }
@@ -333,17 +381,18 @@ mod test {
     #[test]
     fn scanning_multiline_strings_works() {
         let input = "\"this is a string\nacross multiple lines\"";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(
-                    TokenKind::String,
-                    Some("\"this is a string\nacross multiple lines\""),
+                    TokenKind::String {
+                        lexeme: "\"this is a string\nacross multiple lines\""
+                    },
                     2
                 ),
-                Token::new(TokenKind::Eof, None, 2),
+                Token::new(TokenKind::Eof, 2),
             ]
         )
     }
@@ -351,13 +400,13 @@ mod test {
     #[test]
     fn scanning_unterminated_string_produces_error() {
         let input = "\"this is not a string";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().collect_vec(),
             vec![
                 Err(LexicalError::UnterminatedString { line: 1 }),
-                Ok(Token::new(TokenKind::Eof, None, 1)),
+                Ok(Token::new(TokenKind::Eof, 1)),
             ]
         )
     }
@@ -365,15 +414,15 @@ mod test {
     #[test]
     fn scanning_valid_integer_works() {
         let input = "  1 20 4212";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number, Some("1"), 1)),
-                Ok(Token::new(TokenKind::Number, Some("20"), 1)),
-                Ok(Token::new(TokenKind::Number, Some("4212"), 1)),
-                Ok(Token::new(TokenKind::Eof, None, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 1.0 }, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 20.0 }, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 4212.0 }, 1)),
+                Ok(Token::new(TokenKind::Eof, 1)),
             ]
         )
     }
@@ -381,15 +430,15 @@ mod test {
     #[test]
     fn scanning_valid_fractional_number_works() {
         let input = "  0.0001 2.0 421.2";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number, Some("0.0001"), 1)),
-                Ok(Token::new(TokenKind::Number, Some("2.0"), 1)),
-                Ok(Token::new(TokenKind::Number, Some("421.2"), 1)),
-                Ok(Token::new(TokenKind::Eof, None, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 0.0001 }, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 2.0 }, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 421.2 }, 1)),
+                Ok(Token::new(TokenKind::Eof, 1)),
             ]
         )
     }
@@ -397,20 +446,20 @@ mod test {
     #[test]
     fn scanning_invalid_fractional_number_works() {
         let input = "  0. 2123. .2 .0012";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number, Some("0"), 1)),
-                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
-                Ok(Token::new(TokenKind::Number, Some("2123"), 1)),
-                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
-                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
-                Ok(Token::new(TokenKind::Number, Some("2"), 1)),
-                Ok(Token::new(TokenKind::Dot, Some("."), 1)),
-                Ok(Token::new(TokenKind::Number, Some("0012"), 1)),
-                Ok(Token::new(TokenKind::Eof, None, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 0.0 }, 1)),
+                Ok(Token::new(TokenKind::Dot { lexeme: "." }, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 2123.0 }, 1)),
+                Ok(Token::new(TokenKind::Dot { lexeme: "." }, 1)),
+                Ok(Token::new(TokenKind::Dot { lexeme: "." }, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 2.0 }, 1)),
+                Ok(Token::new(TokenKind::Dot { lexeme: "." }, 1)),
+                Ok(Token::new(TokenKind::Number { lexeme: 12.0 }, 1)),
+                Ok(Token::new(TokenKind::Eof, 1)),
             ]
         )
     }
@@ -418,20 +467,30 @@ mod test {
     #[test]
     fn scanning_identifiers_works() {
         let input = "some_identifier _anotherOne als0 c1 0no 001_no ";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::Identifier, Some("some_identifier"), 1),
-                Token::new(TokenKind::Identifier, Some("_anotherOne"), 1),
-                Token::new(TokenKind::Identifier, Some("als0"), 1),
-                Token::new(TokenKind::Identifier, Some("c1"), 1),
-                Token::new(TokenKind::Number, Some("0"), 1),
-                Token::new(TokenKind::Identifier, Some("no"), 1),
-                Token::new(TokenKind::Number, Some("001"), 1),
-                Token::new(TokenKind::Identifier, Some("_no"), 1),
-                Token::new(TokenKind::Eof, None, 1),
+                Token::new(
+                    TokenKind::Identifier {
+                        lexeme: "some_identifier"
+                    },
+                    1
+                ),
+                Token::new(
+                    TokenKind::Identifier {
+                        lexeme: "_anotherOne"
+                    },
+                    1
+                ),
+                Token::new(TokenKind::Identifier { lexeme: "als0" }, 1),
+                Token::new(TokenKind::Identifier { lexeme: "c1" }, 1),
+                Token::new(TokenKind::Number { lexeme: 0.0 }, 1),
+                Token::new(TokenKind::Identifier { lexeme: "no" }, 1),
+                Token::new(TokenKind::Number { lexeme: 1.0 }, 1),
+                Token::new(TokenKind::Identifier { lexeme: "_no" }, 1),
+                Token::new(TokenKind::Eof, 1),
             ]
         )
     }
@@ -439,28 +498,28 @@ mod test {
     #[test]
     fn scanning_reserved_words_works() {
         let input = "and class else false for fun if nil or print return super this true var while";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::And, Some("and"), 1),
-                Token::new(TokenKind::Class, Some("class"), 1),
-                Token::new(TokenKind::Else, Some("else"), 1),
-                Token::new(TokenKind::False, Some("false"), 1),
-                Token::new(TokenKind::For, Some("for"), 1),
-                Token::new(TokenKind::Fun, Some("fun"), 1),
-                Token::new(TokenKind::If, Some("if"), 1),
-                Token::new(TokenKind::Nil, Some("nil"), 1),
-                Token::new(TokenKind::Or, Some("or"), 1),
-                Token::new(TokenKind::Print, Some("print"), 1),
-                Token::new(TokenKind::Return, Some("return"), 1),
-                Token::new(TokenKind::Super, Some("super"), 1),
-                Token::new(TokenKind::This, Some("this"), 1),
-                Token::new(TokenKind::True, Some("true"), 1),
-                Token::new(TokenKind::Var, Some("var"), 1),
-                Token::new(TokenKind::While, Some("while"), 1),
-                Token::new(TokenKind::Eof, None, 1),
+                Token::new(TokenKind::And { lexeme: "and" }, 1),
+                Token::new(TokenKind::Class { lexeme: "class" }, 1),
+                Token::new(TokenKind::Else { lexeme: "else" }, 1),
+                Token::new(TokenKind::False { lexeme: "false" }, 1),
+                Token::new(TokenKind::For { lexeme: "for" }, 1),
+                Token::new(TokenKind::Fun { lexeme: "fun" }, 1),
+                Token::new(TokenKind::If { lexeme: "if" }, 1),
+                Token::new(TokenKind::Nil { lexeme: "nil" }, 1),
+                Token::new(TokenKind::Or { lexeme: "or" }, 1),
+                Token::new(TokenKind::Print { lexeme: "print" }, 1),
+                Token::new(TokenKind::Return { lexeme: "return" }, 1),
+                Token::new(TokenKind::Super { lexeme: "super" }, 1),
+                Token::new(TokenKind::This { lexeme: "this" }, 1),
+                Token::new(TokenKind::True { lexeme: "true" }, 1),
+                Token::new(TokenKind::Var { lexeme: "var" }, 1),
+                Token::new(TokenKind::While { lexeme: "while" }, 1),
+                Token::new(TokenKind::Eof, 1),
             ]
         )
     }
@@ -468,16 +527,16 @@ mod test {
     #[test]
     fn scanning_multiple_lines_works() {
         let input = "(\n)\n{\n}\n";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("("), 1),
-                Token::new(TokenKind::RightParen, Some(")"), 2),
-                Token::new(TokenKind::LeftBrace, Some("{"), 3),
-                Token::new(TokenKind::RightBrace, Some("}"), 4),
-                Token::new(TokenKind::Eof, None, 5),
+                Token::new(TokenKind::LeftParen { lexeme: "(" }, 1),
+                Token::new(TokenKind::RightParen { lexeme: ")" }, 2),
+                Token::new(TokenKind::LeftBrace { lexeme: "{" }, 3),
+                Token::new(TokenKind::RightBrace { lexeme: "}" }, 4),
+                Token::new(TokenKind::Eof, 5),
             ]
         )
     }
@@ -485,16 +544,16 @@ mod test {
     #[test]
     fn scanning_comments_works() {
         let input = "() // this is a comment\n{} // another one";
-        let tokens = Scanner::scan_tokens(input);
+        let tokens = Lexer::lex(input);
 
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen, Some("("), 1),
-                Token::new(TokenKind::RightParen, Some(")"), 1),
-                Token::new(TokenKind::LeftBrace, Some("{"), 2),
-                Token::new(TokenKind::RightBrace, Some("}"), 2),
-                Token::new(TokenKind::Eof, None, 2),
+                Token::new(TokenKind::LeftParen { lexeme: "(" }, 1),
+                Token::new(TokenKind::RightParen { lexeme: ")" }, 1),
+                Token::new(TokenKind::LeftBrace { lexeme: "{" }, 2),
+                Token::new(TokenKind::RightBrace { lexeme: "}" }, 2),
+                Token::new(TokenKind::Eof, 2),
             ]
         )
     }

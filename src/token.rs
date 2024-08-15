@@ -20,79 +20,72 @@ impl<'a> IntoIterator for Tokens<'a> {
 
 pub(crate) type LexResult<'a> = Result<Token<'a>, LexicalError>;
 
-#[derive(Debug)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
+#[derive(Debug, PartialEq)]
 pub(crate) struct Token<'a> {
-    kind: TokenKind,
-    lexeme: Option<&'a str>,
+    kind: TokenKind<'a>,
     line: usize,
 }
 
 impl<'a> Token<'a> {
     pub(crate) fn new(
-        kind: TokenKind,
-        lexeme: Option<&'a str>,
+        kind: TokenKind<'a>,
         line: usize,
     ) -> Self {
-        Self { kind, lexeme, line }
+        Self { kind, line }
     }
 
-    pub(crate) fn lexeme(&self) -> Option<&str> {
-        self.lexeme
-    }
-
-    pub(crate) fn kind(&self) -> TokenKind {
+    pub(crate) fn kind(&self) -> TokenKind<'a> {
         self.kind
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub(crate) enum TokenKind {
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub(crate) enum TokenKind<'a> {
     // Single-character tokens
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    Comma,
-    Dot,
-    Minus,
-    Plus,
-    Semicolon,
-    Slash,
-    Star,
+    LeftParen { lexeme: &'a str },
+    RightParen { lexeme: &'a str },
+    LeftBrace { lexeme: &'a str },
+    RightBrace { lexeme: &'a str },
+    Comma { lexeme: &'a str },
+    Dot { lexeme: &'a str },
+    Minus { lexeme: &'a str },
+    Plus { lexeme: &'a str },
+    Semicolon { lexeme: &'a str },
+    Slash { lexeme: &'a str },
+    Star { lexeme: &'a str },
 
     // One or two character tokens
-    Bang,
-    BangEqual,
-    Equal,
-    EqualEqual,
-    Greater,
-    GreaterEqual,
-    Less,
-    LessEqual,
+    Bang { lexeme: &'a str },
+    BangEqual { lexeme: &'a str },
+    Equal { lexeme: &'a str },
+    EqualEqual { lexeme: &'a str },
+    Greater { lexeme: &'a str },
+    GreaterEqual { lexeme: &'a str },
+    Less { lexeme: &'a str },
+    LessEqual { lexeme: &'a str },
 
     // Literals
-    Identifier,
-    String,
-    Number,
+    Identifier { lexeme: &'a str },
+    String { lexeme: &'a str },
+    Number { lexeme: f64 },
 
     // Keywords
-    And,
-    Class,
-    Else,
-    False,
-    Fun,
-    For,
-    If,
-    Nil,
-    Or,
-    Print,
-    Return,
-    Super,
-    This,
-    True,
-    Var,
-    While,
+    And { lexeme: &'a str },
+    Class { lexeme: &'a str },
+    Else { lexeme: &'a str },
+    False { lexeme: &'a str },
+    Fun { lexeme: &'a str },
+    For { lexeme: &'a str },
+    If { lexeme: &'a str },
+    Nil { lexeme: &'a str },
+    Or { lexeme: &'a str },
+    Print { lexeme: &'a str },
+    Return { lexeme: &'a str },
+    Super { lexeme: &'a str },
+    This { lexeme: &'a str },
+    True { lexeme: &'a str },
+    Var { lexeme: &'a str },
+    While { lexeme: &'a str },
 
     Eof,
 }
