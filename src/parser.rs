@@ -17,7 +17,7 @@ impl<'a> Parser<'a> {
         I: IntoIterator<Item = Token<'a>, IntoIter = std::vec::IntoIter<Token<'a>>>,
     {
         Self {
-            tokens: peek_nth(tokens.into_iter()),
+            tokens: peek_nth(tokens),
         }
     }
 
@@ -161,7 +161,7 @@ impl<'a> Parser<'a> {
                 })),
             };
         }
-        Err(ParseError::UnexpectedEof)
+        Err(ParseError::ExpectExpression)
     }
 }
 
@@ -176,7 +176,7 @@ mod tests {
     use crate::token::TokenKind;
 
     #[test]
-    fn test_basic_parser() {
+    fn test_parsing_basic_expression() {
         let input = "(1 + 2) * 3";
         let tokens = Lexer::lex(input);
 

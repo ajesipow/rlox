@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::fmt::Formatter;
+
 use crate::token::Token;
 
 #[derive(Debug)]
@@ -21,9 +24,25 @@ pub(crate) enum Expr<'a> {
     NumberLiteral(f64),
 }
 
-pub(crate) trait Visitor<T> {
-    fn visit_expr(
-        &mut self,
-        expr: &Expr,
-    ) -> T;
+#[derive(Debug)]
+pub(crate) enum Literal<'a> {
+    Number(f64),
+    String(&'a str),
+    Boolean(bool),
+    None,
+}
+
+impl<'a> Display for Literal<'a> {
+    fn fmt(
+        &self,
+        f: &mut Formatter<'_>,
+    ) -> std::fmt::Result {
+        let v = match self {
+            Literal::Number(n) => n.to_string(),
+            Literal::String(s) => s.to_string(),
+            Literal::Boolean(b) => b.to_string(),
+            Literal::None => "Nil".to_string(),
+        };
+        write!(f, "{v}")
+    }
 }

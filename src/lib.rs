@@ -1,5 +1,6 @@
 mod ast;
 pub mod error;
+mod interpreter;
 mod io;
 mod lexer;
 mod parser;

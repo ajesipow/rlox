@@ -8,6 +8,10 @@ pub struct PublicError(#[from] Error);
 pub enum Error {
     #[error("cannot read input")]
     IO(#[from] std::io::Error),
+    #[error("cannot parse input")]
+    Pase(#[from] ParseError),
+    #[error("cannot interpret input")]
+    Interpret(#[from] RunTimeError),
 }
 
 #[derive(Debug, Error)]
@@ -27,6 +31,8 @@ pub enum ParseError {
     ExpectedClosingParenAfterExpr { line: usize },
     #[error("unexpected EOF")]
     UnexpectedEof,
+    #[error("expected expression")]
+    ExpectExpression,
     #[error("internal parser error")]
     Internal(#[from] ParseErrorInternal),
 }
@@ -35,4 +41,16 @@ pub enum ParseError {
 pub enum ParseErrorInternal {
     #[error("unhandled token on line {line:?}")]
     UnhandledToken { line: usize },
+}
+
+#[derive(Debug, Error)]
+pub enum RunTimeError {
+    #[error("unexpected literal {literal:?} or operand on line {line:?}")]
+    UnexpectedUnaryToken { line: usize, literal: String },
+    #[error("unexpected literals {left:?}, {right:?} or operand on line {line:?}")]
+    UnexpectedBinaryToken {
+        line: usize,
+        left: String,
+        right: String,
+    },
 }
