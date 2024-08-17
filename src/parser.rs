@@ -30,18 +30,18 @@ impl<'a> Parser<'a> {
     }
 
     fn equality(&mut self) -> Result<Expr<'a>, ParseError> {
-        let expr = self.comparison()?;
+        let mut expr = self.comparison()?;
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
                 TokenKind::BangEqual { .. } | TokenKind::EqualEqual { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.comparison()?;
-                    return Ok(Expr::Binary {
+                    expr = Expr::Binary {
                         left: Box::new(expr),
                         operator,
                         right: Box::new(right),
-                    });
+                    };
                 }
                 _ => break,
             }
@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
     }
 
     fn comparison(&mut self) -> Result<Expr<'a>, ParseError> {
-        let expr = self.term()?;
+        let mut expr = self.term()?;
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
@@ -61,11 +61,11 @@ impl<'a> Parser<'a> {
                 | TokenKind::LessEqual { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.term()?;
-                    return Ok(Expr::Binary {
+                    expr = Expr::Binary {
                         left: Box::new(expr),
                         operator,
                         right: Box::new(right),
-                    });
+                    };
                 }
                 _ => break,
             }
@@ -75,18 +75,18 @@ impl<'a> Parser<'a> {
     }
 
     fn term(&mut self) -> Result<Expr<'a>, ParseError> {
-        let expr = self.factor()?;
+        let mut expr = self.factor()?;
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
                 TokenKind::Minus { .. } | TokenKind::Plus { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.factor()?;
-                    return Ok(Expr::Binary {
+                    expr = Expr::Binary {
                         left: Box::new(expr),
                         operator,
                         right: Box::new(right),
-                    });
+                    };
                 }
                 _ => break,
             }
@@ -96,18 +96,18 @@ impl<'a> Parser<'a> {
     }
 
     fn factor(&mut self) -> Result<Expr<'a>, ParseError> {
-        let expr = self.unary()?;
+        let mut expr = self.unary()?;
 
         while let Some(token) = self.tokens.peek() {
             match token.kind() {
                 TokenKind::Star { .. } | TokenKind::Slash { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.unary()?;
-                    return Ok(Expr::Binary {
+                    expr = Expr::Binary {
                         left: Box::new(expr),
                         operator,
                         right: Box::new(right),
-                    });
+                    };
                 }
                 _ => break,
             }
@@ -194,6 +194,27 @@ mod tests {
                 }),
                 operator: Token::new(TokenKind::Star { lexeme: "*" }, 1),
                 right: Box::new(Expr::NumberLiteral(3.0)),
+            }
+        )
+    }
+
+    #[test]
+    fn test_parsing_basic_expression_2() {
+        let input = "1 + 2 * 3";
+        let tokens = Lexer::lex(input);
+
+        let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
+        let ast = parser.parse().unwrap();
+        assert_eq!(
+            ast,
+            Expr::Binary {
+                left: Box::new(Expr::NumberLiteral(1.0)),
+                operator: Token::new(TokenKind::Plus { lexeme: "+" }, 1),
+                right: Box::new(Expr::Binary {
+                    left: Box::new(Expr::NumberLiteral(2.0)),
+                    operator: Token::new(TokenKind::Star { lexeme: "*" }, 1),
+                    right: Box::new(Expr::NumberLiteral(3.0)),
+                }),
             }
         )
     }

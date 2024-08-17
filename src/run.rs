@@ -24,7 +24,7 @@ pub fn run_prompt() -> Result<(), Error> {
                 println!("{o}");
             }
             Err(e) => {
-                println!("{}", e.to_string());
+                println!("{e}");
             }
         }
         buf.clear();
@@ -35,6 +35,6 @@ fn run(buf: &str) -> Result<String, Error> {
     let tokens = Lexer::lex(buf);
     let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
     let ast = parser.parse()?;
-    let output = Interpreter::interpret(Box::new(ast))?;
+    let output = Interpreter::interpret(ast)?;
     Ok(output)
 }

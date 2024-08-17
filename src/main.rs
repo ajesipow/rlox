@@ -18,7 +18,7 @@ fn main() -> Result<(), PublicError> {
 
     if let Some(file_path) = args.file {
         // TODO put this behind struct
-        let raw_source = read_source_file(&file_path)?;
+        let _raw_source = read_source_file(&file_path)?;
     } else {
         // TODO put this behind struct
         run_prompt()?;
