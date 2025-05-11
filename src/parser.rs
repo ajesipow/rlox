@@ -2,6 +2,7 @@ use itertools::peek_nth;
 use itertools::PeekNth;
 
 use crate::ast::Expr;
+use crate::ast::Stmt;
 use crate::error::ParseError;
 use crate::error::ParseErrorInternal;
 use crate::token::Token;
@@ -21,8 +22,50 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(crate) fn parse(&mut self) -> Result<Expr<'a>, ParseError> {
-        self.expression()
+    pub(crate) fn parse(&mut self) -> Result<Vec<Stmt<'a>>, ParseError> {
+        let mut statements = vec![];
+        while let Some(t) = self.tokens.peek() {
+            match t.kind() {
+                TokenKind::Eof => break,
+                _ => {
+                    statements.push(self.statement()?);
+                }
+            }
+        }
+        Ok(statements)
+    }
+
+    fn statement(&mut self) -> Result<Stmt<'a>, ParseError> {
+        match self.tokens.peek() {
+            Some(t) => {
+                match t.kind() {
+                    TokenKind::Print { .. } => {
+                        self.tokens.next(); // Consume the print token
+                        self.print_statement()
+                    }
+                    _ => self.expression_statement(),
+                }
+            }
+            None => Err(ParseError::ExpectStatement),
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Stmt<'a>, ParseError> {
+        let expr = self.expression()?;
+        if !matches!(self.tokens.next(), Some(t) if matches!(t.kind(), TokenKind::Semicolon { .. }))
+        {
+            return Err(ParseError::ExpectSemicolon);
+        }
+        Ok(Stmt::PrintStmt(expr))
+    }
+
+    fn expression_statement(&mut self) -> Result<Stmt<'a>, ParseError> {
+        let expr = self.expression()?;
+        if !matches!(self.tokens.next(), Some(t) if matches!(t.kind(), TokenKind::Semicolon { .. }))
+        {
+            return Err(ParseError::ExpectSemicolon);
+        }
+        Ok(Stmt::ExprStmt(expr))
     }
 
     fn expression(&mut self) -> Result<Expr<'a>, ParseError> {
@@ -170,6 +213,7 @@ mod tests {
     use itertools::Itertools;
 
     use crate::ast::Expr;
+    use crate::ast::Stmt;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
     use crate::token::Token;
@@ -177,14 +221,15 @@ mod tests {
 
     #[test]
     fn test_parsing_basic_expression() {
-        let input = "(1 + 2) * 3";
+        let input = "(1 + 2) * 3;";
         let tokens = Lexer::lex(input);
 
         let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
         let ast = parser.parse().unwrap();
+        assert_eq!(ast.len(), 1);
         assert_eq!(
-            ast,
-            Expr::Binary {
+            ast[0],
+            Stmt::ExprStmt(Expr::Binary {
                 left: Box::new(Expr::Grouping {
                     expression: Box::new(Expr::Binary {
                         left: Box::new(Expr::NumberLiteral(1.0)),
@@ -194,20 +239,21 @@ mod tests {
                 }),
                 operator: Token::new(TokenKind::Star { lexeme: "*" }, 1),
                 right: Box::new(Expr::NumberLiteral(3.0)),
-            }
+            })
         )
     }
 
     #[test]
     fn test_parsing_basic_expression_2() {
-        let input = "1 + 2 * 3";
+        let input = "1 + 2 * 3;";
         let tokens = Lexer::lex(input);
 
         let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
         let ast = parser.parse().unwrap();
+        assert_eq!(ast.len(), 1);
         assert_eq!(
-            ast,
-            Expr::Binary {
+            ast[0],
+            Stmt::ExprStmt(Expr::Binary {
                 left: Box::new(Expr::NumberLiteral(1.0)),
                 operator: Token::new(TokenKind::Plus { lexeme: "+" }, 1),
                 right: Box::new(Expr::Binary {
@@ -215,7 +261,7 @@ mod tests {
                     operator: Token::new(TokenKind::Star { lexeme: "*" }, 1),
                     right: Box::new(Expr::NumberLiteral(3.0)),
                 }),
-            }
+            })
         )
     }
 }

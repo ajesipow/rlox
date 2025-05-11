@@ -19,22 +19,17 @@ pub fn run_prompt() -> Result<(), Error> {
         if bytes_read == 0 {
             return Ok(());
         }
-        match run(&buf) {
-            Ok(o) => {
-                println!("{o}");
-            }
-            Err(e) => {
-                println!("{e}");
-            }
+        if let Err(e) = run(&buf) {
+            println!("{e}");
         }
         buf.clear();
     }
 }
 
-fn run(buf: &str) -> Result<String, Error> {
+fn run(buf: &str) -> Result<(), Error> {
     let tokens = Lexer::lex(buf);
     let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
     let ast = parser.parse()?;
-    let output = Interpreter::interpret(ast)?;
-    Ok(output)
+    Interpreter::interpret(ast)?;
+    Ok(())
 }

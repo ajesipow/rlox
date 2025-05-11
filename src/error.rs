@@ -29,10 +29,14 @@ pub enum LexicalError {
 pub enum ParseError {
     #[error("expected ')' after expression on line {line:?}")]
     ExpectedClosingParenAfterExpr { line: usize },
+    #[error("expected ';' after value")]
+    ExpectSemicolon,
     #[error("unexpected EOF")]
     UnexpectedEof,
     #[error("expected expression")]
     ExpectExpression,
+    #[error("statement expression")]
+    ExpectStatement,
     #[error("internal parser error")]
     Internal(#[from] ParseErrorInternal),
 }

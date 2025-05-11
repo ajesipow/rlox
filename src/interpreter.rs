@@ -6,30 +6,42 @@ use std::ops::Sub;
 
 use crate::ast::Expr;
 use crate::ast::Literal;
+use crate::ast::Stmt;
 use crate::error::RunTimeError;
 use crate::token::TokenKind;
 
 pub(crate) struct Interpreter {}
 
 impl Interpreter {
-    pub(crate) fn interpret(exr: Expr) -> Result<String, RunTimeError> {
-        Self::interpret_inner(exr).map(|l| l.to_string())
+    pub(crate) fn interpret(stmts: Vec<Stmt>) -> Result<(), RunTimeError> {
+        for stmt in stmts {
+            match stmt {
+                Stmt::ExprStmt(expr) => {
+                    Self::eval_expr(expr)?;
+                }
+                Stmt::PrintStmt(expr) => {
+                    let val = Self::eval_expr(expr).map(|l| l.to_string())?;
+                    println!("{val}");
+                }
+            }
+        }
+        Ok(())
     }
 
-    fn interpret_inner(expr: Expr) -> Result<Literal, RunTimeError> {
+    fn eval_expr(expr: Expr) -> Result<Literal, RunTimeError> {
         match expr {
             Expr::NumberLiteral(n) => Ok(Literal::Number(n)),
             Expr::BooleanLiteral(b) => Ok(Literal::Boolean(b)),
             Expr::StringLiteral(s) => Ok(Literal::String(s)),
             Expr::NoneLiteral => Ok(Literal::None),
-            Expr::Grouping { expression } => Self::interpret_inner(*expression),
+            Expr::Grouping { expression } => Self::eval_expr(*expression),
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => {
-                let left = Self::interpret_inner(*left)?;
-                let right = Self::interpret_inner(*right)?;
+                let left = Self::eval_expr(*left)?;
+                let right = Self::eval_expr(*right)?;
                 let op = operator.kind();
                 match (op, left, right) {
                     (TokenKind::Minus { .. }, Literal::Number(l), Literal::Number(r)) => {
@@ -85,7 +97,7 @@ impl Interpreter {
                 }
             }
             Expr::Unary { operator, right } => {
-                let right = Self::interpret_inner(*right)?;
+                let right = Self::eval_expr(*right)?;
                 let op = operator.kind();
                 match (op, right) {
                     (TokenKind::Minus { .. }, Literal::Number(n)) => Ok(Literal::Number(-n)),

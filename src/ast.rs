@@ -5,6 +5,13 @@ use crate::token::Token;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+pub(crate) enum Stmt<'a> {
+    ExprStmt(Expr<'a>),
+    PrintStmt(Expr<'a>),
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Expr<'a> {
     Binary {
         left: Box<Expr<'a>>,
@@ -32,7 +39,7 @@ pub(crate) enum Literal<'a> {
     None,
 }
 
-impl<'a> Display for Literal<'a> {
+impl Display for Literal<'_> {
     fn fmt(
         &self,
         f: &mut Formatter<'_>,
