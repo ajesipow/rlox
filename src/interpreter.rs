@@ -7,41 +7,69 @@ use std::ops::Sub;
 use crate::ast::Expr;
 use crate::ast::Literal;
 use crate::ast::Stmt;
+use crate::environment::Environment;
 use crate::error::RunTimeError;
 use crate::token::TokenKind;
 
-pub(crate) struct Interpreter {}
+pub(crate) struct Interpreter<'a> {
+    environment: Environment<'a>,
+}
 
-impl Interpreter {
-    pub(crate) fn interpret(stmts: Vec<Stmt>) -> Result<(), RunTimeError> {
+impl<'a> Interpreter<'a> {
+    pub fn new() -> Self {
+        Self {
+            environment: Environment::new(),
+        }
+    }
+
+    pub(crate) fn interpret<'b>(
+        &'b mut self,
+        stmts: Vec<Stmt<'a>>,
+    ) -> Result<(), RunTimeError>
+    where
+        'a: 'b,
+    {
         for stmt in stmts {
             match stmt {
-                Stmt::ExprStmt(expr) => {
-                    Self::eval_expr(expr)?;
+                Stmt::Expr(expr) => {
+                    self.eval_expr(expr)?;
                 }
-                Stmt::PrintStmt(expr) => {
-                    let val = Self::eval_expr(expr).map(|l| l.to_string())?;
+                Stmt::Print(expr) => {
+                    let val = self.eval_expr(expr).map(|l| l.to_string())?;
                     println!("{val}");
+                }
+                Stmt::Var { name, expr } => {
+                    let value = match expr {
+                        None => Literal::None,
+                        Some(initializer) => self.eval_expr(initializer)?,
+                    };
+                    self.environment.define(name, value);
                 }
             }
         }
         Ok(())
     }
 
-    fn eval_expr(expr: Expr) -> Result<Literal, RunTimeError> {
+    fn eval_expr<'b>(
+        &'b self,
+        expr: Expr<'a>,
+    ) -> Result<Literal<'a>, RunTimeError>
+    where
+        'a: 'b,
+    {
         match expr {
             Expr::NumberLiteral(n) => Ok(Literal::Number(n)),
             Expr::BooleanLiteral(b) => Ok(Literal::Boolean(b)),
             Expr::StringLiteral(s) => Ok(Literal::String(s)),
             Expr::NoneLiteral => Ok(Literal::None),
-            Expr::Grouping { expression } => Self::eval_expr(*expression),
+            Expr::Grouping { expression } => self.eval_expr(*expression),
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => {
-                let left = Self::eval_expr(*left)?;
-                let right = Self::eval_expr(*right)?;
+                let left = self.eval_expr(*left)?;
+                let right = self.eval_expr(*right)?;
                 let op = operator.kind();
                 match (op, left, right) {
                     (TokenKind::Minus { .. }, Literal::Number(l), Literal::Number(r)) => {
@@ -97,7 +125,7 @@ impl Interpreter {
                 }
             }
             Expr::Unary { operator, right } => {
-                let right = Self::eval_expr(*right)?;
+                let right = Self::eval_expr(self, *right)?;
                 let op = operator.kind();
                 match (op, right) {
                     (TokenKind::Minus { .. }, Literal::Number(n)) => Ok(Literal::Number(-n)),
@@ -109,6 +137,7 @@ impl Interpreter {
                     }),
                 }
             }
+            Expr::Variable(var) => self.environment.get(var),
         }
     }
 }

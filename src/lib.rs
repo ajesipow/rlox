@@ -1,4 +1,5 @@
 mod ast;
+mod environment;
 pub mod error;
 mod interpreter;
 mod io;

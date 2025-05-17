@@ -6,8 +6,8 @@ use crate::token::Token;
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Stmt<'a> {
-    ExprStmt(Expr<'a>),
-    PrintStmt(Expr<'a>),
+    Expr(Expr<'a>),
+    Print(Expr<'a>),
     Var {
         name: &'a str,
         expr: Option<Expr<'a>>,
@@ -36,7 +36,7 @@ pub(crate) enum Expr<'a> {
     NumberLiteral(f64),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub(crate) enum Literal<'a> {
     Number(f64),
     String(&'a str),

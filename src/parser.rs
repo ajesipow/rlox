@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
         {
             return Err(ParseError::ExpectSemicolon);
         }
-        Ok(Stmt::PrintStmt(expr))
+        Ok(Stmt::Print(expr))
     }
 
     fn expression_statement(&mut self) -> Result<Stmt<'a>, ParseError> {
@@ -134,7 +134,7 @@ impl<'a> Parser<'a> {
         {
             return Err(ParseError::ExpectSemicolon);
         }
-        Ok(Stmt::ExprStmt(expr))
+        Ok(Stmt::Expr(expr))
     }
 
     fn expression(&mut self) -> Result<Expr<'a>, ParseError> {
@@ -299,7 +299,7 @@ mod tests {
         assert_eq!(ast.len(), 1);
         assert_eq!(
             ast[0],
-            Stmt::ExprStmt(Expr::Binary {
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Grouping {
                     expression: Box::new(Expr::Binary {
                         left: Box::new(Expr::NumberLiteral(1.0)),
@@ -323,7 +323,7 @@ mod tests {
         assert_eq!(ast.len(), 1);
         assert_eq!(
             ast[0],
-            Stmt::ExprStmt(Expr::Binary {
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::NumberLiteral(1.0)),
                 operator: Token::new(TokenKind::Plus { lexeme: "+" }, 1),
                 right: Box::new(Expr::Binary {

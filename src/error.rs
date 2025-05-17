@@ -59,4 +59,6 @@ pub enum RunTimeError {
         left: String,
         right: String,
     },
+    #[error("undefined variable {variable:?}")]
+    UndefinedVariable { variable: String },
 }

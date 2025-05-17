@@ -30,6 +30,6 @@ fn run(buf: &str) -> Result<(), Error> {
     let tokens = Lexer::lex(buf);
     let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
     let ast = parser.parse()?;
-    Interpreter::interpret(ast)?;
+    Interpreter::new().interpret(ast)?;
     Ok(())
 }
