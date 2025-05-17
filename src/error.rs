@@ -35,8 +35,10 @@ pub enum ParseError {
     UnexpectedEof,
     #[error("expected expression")]
     ExpectExpression,
-    #[error("statement expression")]
+    #[error("expected statement expression")]
     ExpectStatement,
+    #[error("expected variable name")]
+    ExpectIdentifier,
     #[error("internal parser error")]
     Internal(#[from] ParseErrorInternal),
 }

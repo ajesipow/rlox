@@ -8,6 +8,10 @@ use crate::token::Token;
 pub(crate) enum Stmt<'a> {
     ExprStmt(Expr<'a>),
     PrintStmt(Expr<'a>),
+    Var {
+        name: &'a str,
+        expr: Option<Expr<'a>>,
+    },
 }
 
 #[derive(Debug)]
@@ -25,6 +29,7 @@ pub(crate) enum Expr<'a> {
     Grouping {
         expression: Box<Expr<'a>>,
     },
+    Variable(&'a str),
     StringLiteral(&'a str),
     BooleanLiteral(bool),
     NoneLiteral,

@@ -28,11 +28,80 @@ impl<'a> Parser<'a> {
             match t.kind() {
                 TokenKind::Eof => break,
                 _ => {
-                    statements.push(self.statement()?);
+                    if let Some(d) = self.declaration()? {
+                        statements.push(d);
+                    }
                 }
             }
         }
         Ok(statements)
+    }
+
+    fn synchronize(&mut self) {
+        while let Some(t) = self.tokens.peek() {
+            match t.kind() {
+                TokenKind::Eof | TokenKind::Semicolon { .. } => {
+                    self.tokens.next(); // Consume the token
+                    break;
+                }
+                TokenKind::Class { .. }
+                | TokenKind::For { .. }
+                | TokenKind::Fun { .. }
+                | TokenKind::If { .. }
+                | TokenKind::Print { .. }
+                | TokenKind::Return { .. }
+                | TokenKind::Var { .. }
+                | TokenKind::While { .. } => break,
+                _ => {
+                    self.tokens.next();
+                }
+            }
+        }
+    }
+
+    fn declaration(&mut self) -> Result<Option<Stmt<'a>>, ParseError> {
+        if let Some(t) = self.tokens.next() {
+            let func = match t.kind() {
+                TokenKind::Var { .. } => Self::var_declaration,
+                _ => Self::statement,
+            };
+            match func(self) {
+                Ok(stmt) => Ok(Some(stmt)),
+                Err(_) => {
+                    self.synchronize();
+                    Ok(None)
+                }
+            }
+        } else {
+            Err(ParseError::UnexpectedEof)
+        }
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt<'a>, ParseError> {
+        let token = self.tokens.next().ok_or(ParseError::UnexpectedEof)?;
+        let name = match token.kind() {
+            TokenKind::Identifier { lexeme } => lexeme,
+            _ => return Err(ParseError::ExpectIdentifier),
+        };
+
+        let initializer = match self.tokens.next() {
+            Some(t) => match t.kind() {
+                TokenKind::Equal { .. } => Some(self.expression()?),
+                _ => None,
+            },
+            None => None,
+        };
+
+        let semicolon = self.tokens.next().ok_or(ParseError::UnexpectedEof)?;
+        match semicolon.kind() {
+            TokenKind::Semicolon { .. } => (),
+            _ => return Err(ParseError::ExpectSemicolon),
+        }
+
+        Ok(Stmt::Var {
+            name,
+            expr: initializer,
+        })
     }
 
     fn statement(&mut self) -> Result<Stmt<'a>, ParseError> {
@@ -184,6 +253,7 @@ impl<'a> Parser<'a> {
                 TokenKind::Nil { .. } => Ok(Expr::NoneLiteral),
                 TokenKind::Number { lexeme } => Ok(Expr::NumberLiteral(lexeme)),
                 TokenKind::String { lexeme } => Ok(Expr::StringLiteral(lexeme)),
+                TokenKind::Identifier { lexeme } => Ok(Expr::Variable(lexeme)),
                 TokenKind::LeftParen { .. } => {
                     let expr = self.expression()?;
                     if let Some(next_token) = self.tokens.next() {
