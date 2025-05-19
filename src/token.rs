@@ -1,41 +1,43 @@
+use std::rc::Rc;
+
 use crate::error::LexicalError;
 
 #[derive(Debug)]
-pub(crate) struct Tokens<'a>(Vec<LexResult<'a>>);
+pub(crate) struct Tokens(Vec<LexResult>);
 
-impl<'a> Tokens<'a> {
-    pub fn new(tokens: Vec<LexResult<'a>>) -> Self {
+impl Tokens {
+    pub fn new(tokens: Vec<LexResult>) -> Self {
         Self(tokens)
     }
 }
 
-impl<'a> IntoIterator for Tokens<'a> {
+impl IntoIterator for Tokens {
     type IntoIter = std::vec::IntoIter<Self::Item>;
-    type Item = LexResult<'a>;
+    type Item = LexResult;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
-pub(crate) type LexResult<'a> = Result<Token<'a>, LexicalError>;
+pub(crate) type LexResult = Result<Token, LexicalError>;
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct Token<'a> {
-    kind: TokenKind<'a>,
+pub(crate) struct Token {
+    kind: TokenKind,
     line: usize,
 }
 
-impl<'a> Token<'a> {
+impl Token {
     pub(crate) fn new(
-        kind: TokenKind<'a>,
+        kind: TokenKind,
         line: usize,
     ) -> Self {
         Self { kind, line }
     }
 
-    pub(crate) fn kind(&self) -> TokenKind<'a> {
-        self.kind
+    pub(crate) fn kind(&self) -> &TokenKind {
+        &self.kind
     }
 
     pub(crate) fn line(&self) -> usize {
@@ -43,53 +45,53 @@ impl<'a> Token<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub(crate) enum TokenKind<'a> {
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum TokenKind {
     // Single-character tokens
-    LeftParen { lexeme: &'a str },
-    RightParen { lexeme: &'a str },
-    LeftBrace { lexeme: &'a str },
-    RightBrace { lexeme: &'a str },
-    Comma { lexeme: &'a str },
-    Dot { lexeme: &'a str },
-    Minus { lexeme: &'a str },
-    Plus { lexeme: &'a str },
-    Semicolon { lexeme: &'a str },
-    Slash { lexeme: &'a str },
-    Star { lexeme: &'a str },
+    LeftParen { lexeme: Rc<str> },
+    RightParen { lexeme: Rc<str> },
+    LeftBrace { lexeme: Rc<str> },
+    RightBrace { lexeme: Rc<str> },
+    Comma { lexeme: Rc<str> },
+    Dot { lexeme: Rc<str> },
+    Minus { lexeme: Rc<str> },
+    Plus { lexeme: Rc<str> },
+    Semicolon { lexeme: Rc<str> },
+    Slash { lexeme: Rc<str> },
+    Star { lexeme: Rc<str> },
 
     // One or two character tokens
-    Bang { lexeme: &'a str },
-    BangEqual { lexeme: &'a str },
-    Equal { lexeme: &'a str },
-    EqualEqual { lexeme: &'a str },
-    Greater { lexeme: &'a str },
-    GreaterEqual { lexeme: &'a str },
-    Less { lexeme: &'a str },
-    LessEqual { lexeme: &'a str },
+    Bang { lexeme: Rc<str> },
+    BangEqual { lexeme: Rc<str> },
+    Equal { lexeme: Rc<str> },
+    EqualEqual { lexeme: Rc<str> },
+    Greater { lexeme: Rc<str> },
+    GreaterEqual { lexeme: Rc<str> },
+    Less { lexeme: Rc<str> },
+    LessEqual { lexeme: Rc<str> },
 
     // Literals
-    Identifier { lexeme: &'a str },
-    String { lexeme: &'a str },
+    Identifier { lexeme: Rc<str> },
+    String { lexeme: Rc<str> },
     Number { lexeme: f64 },
 
     // Keywords
-    And { lexeme: &'a str },
-    Class { lexeme: &'a str },
-    Else { lexeme: &'a str },
-    False { lexeme: &'a str },
-    Fun { lexeme: &'a str },
-    For { lexeme: &'a str },
-    If { lexeme: &'a str },
-    Nil { lexeme: &'a str },
-    Or { lexeme: &'a str },
-    Print { lexeme: &'a str },
-    Return { lexeme: &'a str },
-    Super { lexeme: &'a str },
-    This { lexeme: &'a str },
-    True { lexeme: &'a str },
-    Var { lexeme: &'a str },
-    While { lexeme: &'a str },
+    And { lexeme: Rc<str> },
+    Class { lexeme: Rc<str> },
+    Else { lexeme: Rc<str> },
+    False { lexeme: Rc<str> },
+    Fun { lexeme: Rc<str> },
+    For { lexeme: Rc<str> },
+    If { lexeme: Rc<str> },
+    Nil { lexeme: Rc<str> },
+    Or { lexeme: Rc<str> },
+    Print { lexeme: Rc<str> },
+    Return { lexeme: Rc<str> },
+    Super { lexeme: Rc<str> },
+    This { lexeme: Rc<str> },
+    True { lexeme: Rc<str> },
+    Var { lexeme: Rc<str> },
+    While { lexeme: Rc<str> },
 
     Eof,
 }

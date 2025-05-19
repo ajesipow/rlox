@@ -1,50 +1,48 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::rc::Rc;
 
 use crate::token::Token;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) enum Stmt<'a> {
-    Expr(Expr<'a>),
-    Print(Expr<'a>),
-    Var {
-        name: &'a str,
-        expr: Option<Expr<'a>>,
-    },
+pub(crate) enum Stmt {
+    Expr(Expr),
+    Print(Expr),
+    Var { name: Rc<str>, expr: Option<Expr> },
 }
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) enum Expr<'a> {
+pub(crate) enum Expr {
     Binary {
-        left: Box<Expr<'a>>,
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
     },
     Unary {
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
+        operator: Token,
+        right: Box<Expr>,
     },
     Grouping {
-        expression: Box<Expr<'a>>,
+        expression: Box<Expr>,
     },
-    Variable(&'a str),
-    StringLiteral(&'a str),
+    Variable(Rc<str>),
+    StringLiteral(Rc<str>),
     BooleanLiteral(bool),
     NoneLiteral,
     NumberLiteral(f64),
 }
 
-#[derive(Debug, Copy, Clone)]
-pub(crate) enum Literal<'a> {
+#[derive(Debug, Clone)]
+pub(crate) enum Literal {
     Number(f64),
-    String(&'a str),
+    String(Rc<str>),
     Boolean(bool),
     None,
 }
 
-impl Display for Literal<'_> {
+impl Display for Literal {
     fn fmt(
         &self,
         f: &mut Formatter<'_>,

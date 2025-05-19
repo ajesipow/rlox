@@ -11,24 +11,21 @@ use crate::environment::Environment;
 use crate::error::RunTimeError;
 use crate::token::TokenKind;
 
-pub(crate) struct Interpreter<'a> {
-    environment: Environment<'a>,
+pub(crate) struct Interpreter {
+    environment: Environment,
 }
 
-impl<'a> Interpreter<'a> {
+impl Interpreter {
     pub fn new() -> Self {
         Self {
             environment: Environment::new(),
         }
     }
 
-    pub(crate) fn interpret<'b>(
-        &'b mut self,
-        stmts: Vec<Stmt<'a>>,
-    ) -> Result<(), RunTimeError>
-    where
-        'a: 'b,
-    {
+    pub(crate) fn interpret(
+        &mut self,
+        stmts: Vec<Stmt>,
+    ) -> Result<(), RunTimeError> {
         for stmt in stmts {
             match stmt {
                 Stmt::Expr(expr) => {
@@ -50,13 +47,10 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn eval_expr<'b>(
-        &'b self,
-        expr: Expr<'a>,
-    ) -> Result<Literal<'a>, RunTimeError>
-    where
-        'a: 'b,
-    {
+    fn eval_expr(
+        &self,
+        expr: Expr,
+    ) -> Result<Literal, RunTimeError> {
         match expr {
             Expr::NumberLiteral(n) => Ok(Literal::Number(n)),
             Expr::BooleanLiteral(b) => Ok(Literal::Boolean(b)),
@@ -137,7 +131,7 @@ impl<'a> Interpreter<'a> {
                     }),
                 }
             }
-            Expr::Variable(var) => self.environment.get(var),
+            Expr::Variable(var) => self.environment.get(&var),
         }
     }
 }

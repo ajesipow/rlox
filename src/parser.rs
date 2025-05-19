@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use itertools::peek_nth;
 use itertools::PeekNth;
 
@@ -8,21 +10,21 @@ use crate::error::ParseErrorInternal;
 use crate::token::Token;
 use crate::token::TokenKind;
 
-pub(crate) struct Parser<'a> {
-    tokens: PeekNth<std::vec::IntoIter<Token<'a>>>,
+pub(crate) struct Parser {
+    tokens: PeekNth<std::vec::IntoIter<Token>>,
 }
 
-impl<'a> Parser<'a> {
+impl Parser {
     pub(crate) fn new<I>(tokens: I) -> Self
     where
-        I: IntoIterator<Item = Token<'a>, IntoIter = std::vec::IntoIter<Token<'a>>>,
+        I: IntoIterator<Item = Token, IntoIter = std::vec::IntoIter<Token>>,
     {
         Self {
             tokens: peek_nth(tokens),
         }
     }
 
-    pub(crate) fn parse(&mut self) -> Result<Vec<Stmt<'a>>, ParseError> {
+    pub(crate) fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
         let mut statements = vec![];
         while let Some(t) = self.tokens.peek() {
             match t.kind() {
@@ -59,10 +61,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn declaration(&mut self) -> Result<Option<Stmt<'a>>, ParseError> {
-        if let Some(t) = self.tokens.next() {
+    fn declaration(&mut self) -> Result<Option<Stmt>, ParseError> {
+        if let Some(t) = self.tokens.peek() {
             let func = match t.kind() {
-                TokenKind::Var { .. } => Self::var_declaration,
+                TokenKind::Var { .. } => {
+                    self.tokens.next();
+                    Self::var_declaration
+                }
                 _ => Self::statement,
             };
             match func(self) {
@@ -77,7 +82,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn var_declaration(&mut self) -> Result<Stmt<'a>, ParseError> {
+    fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
         let token = self.tokens.next().ok_or(ParseError::UnexpectedEof)?;
         let name = match token.kind() {
             TokenKind::Identifier { lexeme } => lexeme,
@@ -92,19 +97,19 @@ impl<'a> Parser<'a> {
             None => None,
         };
 
-        let semicolon = self.tokens.next().ok_or(ParseError::UnexpectedEof)?;
-        match semicolon.kind() {
+        let t = self.tokens.next().ok_or(ParseError::UnexpectedEof)?;
+        match t.kind() {
             TokenKind::Semicolon { .. } => (),
             _ => return Err(ParseError::ExpectSemicolon),
         }
 
         Ok(Stmt::Var {
-            name,
+            name: Rc::clone(name),
             expr: initializer,
         })
     }
 
-    fn statement(&mut self) -> Result<Stmt<'a>, ParseError> {
+    fn statement(&mut self) -> Result<Stmt, ParseError> {
         match self.tokens.peek() {
             Some(t) => {
                 match t.kind() {
@@ -119,7 +124,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn print_statement(&mut self) -> Result<Stmt<'a>, ParseError> {
+    fn print_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
         if !matches!(self.tokens.next(), Some(t) if matches!(t.kind(), TokenKind::Semicolon { .. }))
         {
@@ -128,7 +133,7 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Print(expr))
     }
 
-    fn expression_statement(&mut self) -> Result<Stmt<'a>, ParseError> {
+    fn expression_statement(&mut self) -> Result<Stmt, ParseError> {
         let expr = self.expression()?;
         if !matches!(self.tokens.next(), Some(t) if matches!(t.kind(), TokenKind::Semicolon { .. }))
         {
@@ -137,15 +142,15 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Expr(expr))
     }
 
-    fn expression(&mut self) -> Result<Expr<'a>, ParseError> {
+    fn expression(&mut self) -> Result<Expr, ParseError> {
         self.equality()
     }
 
-    fn equality(&mut self) -> Result<Expr<'a>, ParseError> {
+    fn equality(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.comparison()?;
 
-        while let Some(token) = self.tokens.peek() {
-            match token.kind() {
+        while let Some(t) = self.tokens.peek() {
+            match t.kind() {
                 TokenKind::BangEqual { .. } | TokenKind::EqualEqual { .. } => {
                     let operator = self.tokens.next().expect("cannot fail");
                     let right = self.comparison()?;
@@ -162,7 +167,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> Result<Expr<'a>, ParseError> {
+    fn comparison(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.term()?;
 
         while let Some(token) = self.tokens.peek() {
@@ -186,7 +191,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn term(&mut self) -> Result<Expr<'a>, ParseError> {
+    fn term(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.factor()?;
 
         while let Some(token) = self.tokens.peek() {
@@ -207,7 +212,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn factor(&mut self) -> Result<Expr<'a>, ParseError> {
+    fn factor(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.unary()?;
 
         while let Some(token) = self.tokens.peek() {
@@ -228,7 +233,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn unary(&mut self) -> Result<Expr<'a>, ParseError> {
+    fn unary(&mut self) -> Result<Expr, ParseError> {
         if let Some(token) = self.tokens.peek() {
             match token.kind() {
                 TokenKind::Bang { .. } | TokenKind::Minus { .. } => {
@@ -245,15 +250,15 @@ impl<'a> Parser<'a> {
         self.primary()
     }
 
-    fn primary(&mut self) -> Result<Expr<'a>, ParseError> {
+    fn primary(&mut self) -> Result<Expr, ParseError> {
         if let Some(token) = self.tokens.next() {
             return match token.kind() {
                 TokenKind::True { .. } => Ok(Expr::BooleanLiteral(true)),
                 TokenKind::False { .. } => Ok(Expr::BooleanLiteral(false)),
                 TokenKind::Nil { .. } => Ok(Expr::NoneLiteral),
-                TokenKind::Number { lexeme } => Ok(Expr::NumberLiteral(lexeme)),
-                TokenKind::String { lexeme } => Ok(Expr::StringLiteral(lexeme)),
-                TokenKind::Identifier { lexeme } => Ok(Expr::Variable(lexeme)),
+                TokenKind::Number { lexeme } => Ok(Expr::NumberLiteral(*lexeme)),
+                TokenKind::String { lexeme } => Ok(Expr::StringLiteral(Rc::clone(lexeme))),
+                TokenKind::Identifier { lexeme } => Ok(Expr::Variable(Rc::clone(lexeme))),
                 TokenKind::LeftParen { .. } => {
                     let expr = self.expression()?;
                     if let Some(next_token) = self.tokens.next() {
@@ -280,6 +285,8 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use itertools::Itertools;
 
     use crate::ast::Expr;
@@ -292,7 +299,7 @@ mod tests {
     #[test]
     fn test_parsing_basic_expression() {
         let input = "(1 + 2) * 3;";
-        let tokens = Lexer::lex(input);
+        let tokens = Lexer::lex(Rc::from(input));
 
         let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
         let ast = parser.parse().unwrap();
@@ -303,11 +310,21 @@ mod tests {
                 left: Box::new(Expr::Grouping {
                     expression: Box::new(Expr::Binary {
                         left: Box::new(Expr::NumberLiteral(1.0)),
-                        operator: Token::new(TokenKind::Plus { lexeme: "+" }, 1),
+                        operator: Token::new(
+                            TokenKind::Plus {
+                                lexeme: Rc::from("+")
+                            },
+                            1
+                        ),
                         right: Box::new(Expr::NumberLiteral(2.0)),
                     })
                 }),
-                operator: Token::new(TokenKind::Star { lexeme: "*" }, 1),
+                operator: Token::new(
+                    TokenKind::Star {
+                        lexeme: Rc::from("*")
+                    },
+                    1
+                ),
                 right: Box::new(Expr::NumberLiteral(3.0)),
             })
         )
@@ -316,7 +333,7 @@ mod tests {
     #[test]
     fn test_parsing_basic_expression_2() {
         let input = "1 + 2 * 3;";
-        let tokens = Lexer::lex(input);
+        let tokens = Lexer::lex(Rc::from(input));
 
         let mut parser = Parser::new(tokens.into_iter().flatten().collect_vec());
         let ast = parser.parse().unwrap();
@@ -325,10 +342,20 @@ mod tests {
             ast[0],
             Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::NumberLiteral(1.0)),
-                operator: Token::new(TokenKind::Plus { lexeme: "+" }, 1),
+                operator: Token::new(
+                    TokenKind::Plus {
+                        lexeme: Rc::from("+")
+                    },
+                    1
+                ),
                 right: Box::new(Expr::Binary {
                     left: Box::new(Expr::NumberLiteral(2.0)),
-                    operator: Token::new(TokenKind::Star { lexeme: "*" }, 1),
+                    operator: Token::new(
+                        TokenKind::Star {
+                            lexeme: Rc::from("*")
+                        },
+                        1
+                    ),
                     right: Box::new(Expr::NumberLiteral(3.0)),
                 }),
             })

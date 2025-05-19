@@ -9,4 +9,4 @@ mod run;
 mod token;
 
 pub use io::read_source_file;
-pub use run::run_prompt;
+pub use run::run_repl;

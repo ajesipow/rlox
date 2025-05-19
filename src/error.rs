@@ -6,11 +6,11 @@ pub struct PublicError(#[from] Error);
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("cannot read input")]
+    #[error("cannot read input: {0}")]
     IO(#[from] std::io::Error),
-    #[error("cannot parse input")]
+    #[error("cannot parse input: {0}")]
     Pase(#[from] ParseError),
-    #[error("cannot interpret input")]
+    #[error("cannot interpret input: {0}")]
     Interpret(#[from] RunTimeError),
 }
 

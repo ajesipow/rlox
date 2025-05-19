@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use rlox::error::PublicError;
 use rlox::read_source_file;
-use rlox::run_prompt;
+use rlox::run_repl;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -21,7 +21,7 @@ fn main() -> Result<(), PublicError> {
         let _raw_source = read_source_file(&file_path)?;
     } else {
         // TODO put this behind struct
-        run_prompt()?;
+        run_repl()?;
     }
     println!("Hello, world!");
     Ok(())
