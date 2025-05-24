@@ -143,7 +143,28 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.equality()?;
+
+        if let Some(tok) = self.tokens.peek() {
+            if matches!(tok.kind(), TokenKind::Equal { .. }) {
+                self.tokens.next();
+                let value = self.assignment()?;
+
+                return match expr {
+                    Expr::Variable(tok) => Ok(Expr::Assign {
+                        name: tok,
+                        value: Box::new(value),
+                    }),
+                    _ => Err(ParseError::InvalidAssignmentTarget),
+                };
+            }
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr, ParseError> {
@@ -258,7 +279,7 @@ impl Parser {
                 TokenKind::Nil { .. } => Ok(Expr::NoneLiteral),
                 TokenKind::Number { lexeme } => Ok(Expr::NumberLiteral(*lexeme)),
                 TokenKind::String { lexeme } => Ok(Expr::StringLiteral(Rc::clone(lexeme))),
-                TokenKind::Identifier { lexeme } => Ok(Expr::Variable(Rc::clone(lexeme))),
+                TokenKind::Identifier { .. } => Ok(Expr::Variable(token)),
                 TokenKind::LeftParen { .. } => {
                     let expr = self.expression()?;
                     if let Some(next_token) = self.tokens.next() {

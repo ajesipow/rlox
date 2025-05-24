@@ -15,6 +15,10 @@ pub(crate) enum Stmt {
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Expr {
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         operator: Token,
@@ -27,7 +31,7 @@ pub(crate) enum Expr {
     Grouping {
         expression: Box<Expr>,
     },
-    Variable(Rc<str>),
+    Variable(Token),
     StringLiteral(Rc<str>),
     BooleanLiteral(bool),
     NoneLiteral,

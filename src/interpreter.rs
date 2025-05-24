@@ -131,7 +131,17 @@ impl Interpreter {
                     }),
                 }
             }
-            Expr::Variable(var) => self.environment.get(&var),
+            Expr::Variable(var) => {
+                match var.kind()  {
+                    TokenKind::Identifier { lexeme} => self.environment.get(lexeme),
+                    _ => Err(RunTimeError::ExpectedIdentifierToken)
+                }
+            },
+            Expr::Assign { name, value } => {
+                let val = self.eval_expr(*value)?;
+                self.environment.assign(name, val.clone())?;
+                Ok(val)
+            }
         }
     }
 }

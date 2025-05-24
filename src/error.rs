@@ -31,6 +31,8 @@ pub enum ParseError {
     ExpectedClosingParenAfterExpr { line: usize },
     #[error("expected ';' after value")]
     ExpectSemicolon,
+    #[error("invalid assignment target")]
+    InvalidAssignmentTarget,
     #[error("unexpected EOF")]
     UnexpectedEof,
     #[error("expected expression")]
@@ -61,4 +63,6 @@ pub enum RunTimeError {
     },
     #[error("undefined variable {variable:?}")]
     UndefinedVariable { variable: String },
+    #[error("expected identifier token")]
+    ExpectedIdentifierToken
 }
