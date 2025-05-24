@@ -8,6 +8,7 @@ use crate::token::Token;
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Stmt {
+    Block(Vec<Stmt>),
     Expr(Expr),
     Print(Expr),
     Var {

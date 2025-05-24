@@ -23,6 +23,5 @@ fn main() -> Result<(), PublicError> {
         // TODO put this behind struct
         run_repl()?;
     }
-    println!("Hello, world!");
     Ok(())
 }

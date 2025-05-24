@@ -1,3 +1,4 @@
+use std::mem;
 use std::ops::Add;
 use std::ops::Div;
 use std::ops::Mul;
@@ -18,7 +19,7 @@ pub(crate) struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            environment: Environment::new(),
+            environment: Environment::new(None),
         }
     }
 
@@ -28,6 +29,13 @@ impl Interpreter {
     ) -> Result<(), RunTimeError> {
         for stmt in stmts {
             match stmt {
+                Stmt::Block(stmts) => {
+                    let env = mem::take(&mut self.environment);
+                    self.environment = Environment::new(Some(env));
+                    let res = self.interpret(stmts);
+                    self.environment = self.environment.take_enclosing().unwrap();
+                    res?
+                }
                 Stmt::Expr(expr) => {
                     self.eval_expr(expr)?;
                 }

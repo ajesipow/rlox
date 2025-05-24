@@ -31,6 +31,8 @@ pub enum ParseError {
     ExpectedClosingParenAfterExpr { line: usize },
     #[error("expected ';' after value")]
     ExpectSemicolon,
+    #[error("expected '}}' after block")]
+    ExpectRightBraceAfterBlock,
     #[error("invalid assignment target")]
     InvalidAssignmentTarget,
     #[error("unexpected EOF")]

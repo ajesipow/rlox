@@ -115,11 +115,33 @@ impl Parser {
                         self.tokens.next(); // Consume the print token
                         self.print_statement()
                     }
+                    TokenKind::LeftBrace { .. } => {
+                        self.tokens.next(); // Consume the brace token
+                        Ok(Stmt::Block(self.block()?))
+                    }
                     _ => self.expression_statement(),
                 }
             }
             None => Err(ParseError::ExpectStatement),
         }
+    }
+
+    fn block(&mut self) -> Result<Vec<Stmt>, ParseError> {
+        let mut stmts = vec![];
+        while let Some(t) = self.tokens.peek() {
+            match t.kind() {
+                TokenKind::RightBrace(_) | TokenKind::Eof => break,
+                _ => {
+                    if let Some(d) = self.declaration()? {
+                        stmts.push(d);
+                    }
+                }
+            }
+        }
+        if !matches!(self.tokens.next(), Some(t) if matches!(t.kind(), TokenKind::RightBrace(_))) {
+            return Err(ParseError::ExpectRightBraceAfterBlock);
+        }
+        Ok(stmts)
     }
 
     fn print_statement(&mut self) -> Result<Stmt, ParseError> {
