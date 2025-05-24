@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use itertools::peek_nth;
 use itertools::PeekNth;
 
@@ -85,7 +83,7 @@ impl Parser {
     fn var_declaration(&mut self) -> Result<Stmt, ParseError> {
         let token = self.tokens.next().ok_or(ParseError::UnexpectedEof)?;
         let name = match token.kind() {
-            TokenKind::Identifier { lexeme } => lexeme,
+            TokenKind::Identifier(t) => t,
             _ => return Err(ParseError::ExpectIdentifier),
         };
 
@@ -104,7 +102,7 @@ impl Parser {
         }
 
         Ok(Stmt::Var {
-            name: Rc::clone(name),
+            name: name.clone(),
             expr: initializer,
         })
     }
@@ -277,9 +275,9 @@ impl Parser {
                 TokenKind::True { .. } => Ok(Expr::BooleanLiteral(true)),
                 TokenKind::False { .. } => Ok(Expr::BooleanLiteral(false)),
                 TokenKind::Nil { .. } => Ok(Expr::NoneLiteral),
-                TokenKind::Number { lexeme } => Ok(Expr::NumberLiteral(*lexeme)),
-                TokenKind::String { lexeme } => Ok(Expr::StringLiteral(Rc::clone(lexeme))),
-                TokenKind::Identifier { .. } => Ok(Expr::Variable(token)),
+                TokenKind::Number(t) => Ok(Expr::NumberLiteral(t.lexeme())),
+                TokenKind::String(t) => Ok(Expr::StringLiteral(t.lexeme())),
+                TokenKind::Identifier(t) => Ok(Expr::Variable(t.clone())),
                 TokenKind::LeftParen { .. } => {
                     let expr = self.expression()?;
                     if let Some(next_token) = self.tokens.next() {
@@ -314,8 +312,9 @@ mod tests {
     use crate::ast::Stmt;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use crate::token::PlusToken;
+    use crate::token::StarToken;
     use crate::token::Token;
-    use crate::token::TokenKind;
 
     #[test]
     fn test_parsing_basic_expression() {
@@ -331,21 +330,11 @@ mod tests {
                 left: Box::new(Expr::Grouping {
                     expression: Box::new(Expr::Binary {
                         left: Box::new(Expr::NumberLiteral(1.0)),
-                        operator: Token::new(
-                            TokenKind::Plus {
-                                lexeme: Rc::from("+")
-                            },
-                            1
-                        ),
+                        operator: Token::new(PlusToken::new("+").into(), 1),
                         right: Box::new(Expr::NumberLiteral(2.0)),
                     })
                 }),
-                operator: Token::new(
-                    TokenKind::Star {
-                        lexeme: Rc::from("*")
-                    },
-                    1
-                ),
+                operator: Token::new(StarToken::new("*").into(), 1),
                 right: Box::new(Expr::NumberLiteral(3.0)),
             })
         )
@@ -363,20 +352,10 @@ mod tests {
             ast[0],
             Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::NumberLiteral(1.0)),
-                operator: Token::new(
-                    TokenKind::Plus {
-                        lexeme: Rc::from("+")
-                    },
-                    1
-                ),
+                operator: Token::new(PlusToken::new("+").into(), 1),
                 right: Box::new(Expr::Binary {
                     left: Box::new(Expr::NumberLiteral(2.0)),
-                    operator: Token::new(
-                        TokenKind::Star {
-                            lexeme: Rc::from("*")
-                        },
-                        1
-                    ),
+                    operator: Token::new(StarToken::new("*").into(), 1),
                     right: Box::new(Expr::NumberLiteral(3.0)),
                 }),
             })

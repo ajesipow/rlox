@@ -64,5 +64,5 @@ pub enum RunTimeError {
     #[error("undefined variable {variable:?}")]
     UndefinedVariable { variable: String },
     #[error("expected identifier token")]
-    ExpectedIdentifierToken
+    ExpectedIdentifierToken,
 }

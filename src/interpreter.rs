@@ -40,7 +40,7 @@ impl Interpreter {
                         None => Literal::None,
                         Some(initializer) => self.eval_expr(initializer)?,
                     };
-                    self.environment.define(name, value);
+                    self.environment.define(name.lexeme(), value);
                 }
             }
         }
@@ -48,7 +48,7 @@ impl Interpreter {
     }
 
     fn eval_expr(
-        &self,
+        &mut self,
         expr: Expr,
     ) -> Result<Literal, RunTimeError> {
         match expr {
@@ -131,15 +131,10 @@ impl Interpreter {
                     }),
                 }
             }
-            Expr::Variable(var) => {
-                match var.kind()  {
-                    TokenKind::Identifier { lexeme} => self.environment.get(lexeme),
-                    _ => Err(RunTimeError::ExpectedIdentifierToken)
-                }
-            },
+            Expr::Variable(var) => self.environment.get(var.lexeme()),
             Expr::Assign { name, value } => {
                 let val = self.eval_expr(*value)?;
-                self.environment.assign(name, val.clone())?;
+                self.environment.assign(name.lexeme(), val.clone())?;
                 Ok(val)
             }
         }

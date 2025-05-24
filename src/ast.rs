@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::rc::Rc;
 
+use crate::token::IdentifierToken;
 use crate::token::Token;
 
 #[derive(Debug)]
@@ -9,14 +10,17 @@ use crate::token::Token;
 pub(crate) enum Stmt {
     Expr(Expr),
     Print(Expr),
-    Var { name: Rc<str>, expr: Option<Expr> },
+    Var {
+        name: IdentifierToken,
+        expr: Option<Expr>,
+    },
 }
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum Expr {
     Assign {
-        name: Token,
+        name: IdentifierToken,
         value: Box<Expr>,
     },
     Binary {
@@ -31,7 +35,7 @@ pub(crate) enum Expr {
     Grouping {
         expression: Box<Expr>,
     },
-    Variable(Token),
+    Variable(IdentifierToken),
     StringLiteral(Rc<str>),
     BooleanLiteral(bool),
     NoneLiteral,

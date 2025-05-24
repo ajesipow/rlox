@@ -4,9 +4,47 @@ use itertools::peek_nth;
 use itertools::PeekNth;
 
 use crate::error::LexicalError;
+use crate::token::AndToken;
+use crate::token::BangEqualToken;
+use crate::token::BangToken;
+use crate::token::ClassToken;
+use crate::token::CommaToken;
+use crate::token::DotToken;
+use crate::token::ElseToken;
+use crate::token::EqualEqualToken;
+use crate::token::EqualToken;
+use crate::token::FalseToken;
+use crate::token::ForToken;
+use crate::token::FunToken;
+use crate::token::GreaterEqualToken;
+use crate::token::GreaterToken;
+use crate::token::IdentifierToken;
+use crate::token::IfToken;
+use crate::token::LeftBraceToken;
+use crate::token::LeftParenToken;
+use crate::token::LessEqualToken;
+use crate::token::LessToken;
+use crate::token::MinusToken;
+use crate::token::NilToken;
+use crate::token::NumberToken;
+use crate::token::OrToken;
+use crate::token::PlusToken;
+use crate::token::PrintToken;
+use crate::token::ReturnToken;
+use crate::token::RightBraceToken;
+use crate::token::RightParenToken;
+use crate::token::SemicolonToken;
+use crate::token::SlashToken;
+use crate::token::StarToken;
+use crate::token::StringToken;
+use crate::token::SuperToken;
+use crate::token::ThisToken;
 use crate::token::Token;
 use crate::token::TokenKind;
 use crate::token::Tokens;
+use crate::token::TrueToken;
+use crate::token::VarToken;
+use crate::token::WhileToken;
 
 #[derive(Debug)]
 pub(crate) struct Lexer;
@@ -21,36 +59,26 @@ impl Lexer {
         let mut characters = indexed_iterator(peek_nth(source.chars()));
         while let Some(char) = characters.next() {
             let token_kind = match char {
-                '(' => Ok(TokenKind::LeftParen {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                ')' => Ok(TokenKind::RightParen {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                '{' => Ok(TokenKind::LeftBrace {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                '}' => Ok(TokenKind::RightBrace {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                ',' => Ok(TokenKind::Comma {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                '.' => Ok(TokenKind::Dot {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                '-' => Ok(TokenKind::Minus {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                '+' => Ok(TokenKind::Plus {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                ';' => Ok(TokenKind::Semicolon {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
-                '*' => Ok(TokenKind::Star {
-                    lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                }),
+                '(' => {
+                    Ok(LeftParenToken::new(&source[lexeme_start..characters.current_idx()]).into())
+                }
+                ')' => Ok(
+                    RightParenToken::new(&source[lexeme_start..characters.current_idx()]).into(),
+                ),
+                '{' => {
+                    Ok(LeftBraceToken::new(&source[lexeme_start..characters.current_idx()]).into())
+                }
+                '}' => Ok(
+                    RightBraceToken::new(&source[lexeme_start..characters.current_idx()]).into(),
+                ),
+                ',' => Ok(CommaToken::new(&source[lexeme_start..characters.current_idx()]).into()),
+                '.' => Ok(DotToken::new(&source[lexeme_start..characters.current_idx()]).into()),
+                '-' => Ok(MinusToken::new(&source[lexeme_start..characters.current_idx()]).into()),
+                '+' => Ok(PlusToken::new(&source[lexeme_start..characters.current_idx()]).into()),
+                ';' => {
+                    Ok(SemicolonToken::new(&source[lexeme_start..characters.current_idx()]).into())
+                }
+                '*' => Ok(StarToken::new(&source[lexeme_start..characters.current_idx()]).into()),
                 c if c.is_ascii_alphabetic() || c == '_' => {
                     while characters
                         .next_if(|c| c.is_ascii_alphanumeric() || *c == '_')
@@ -61,9 +89,10 @@ impl Lexer {
                     if let Some(token_kind) = get_reserved_keyword_token(val) {
                         Ok(token_kind)
                     } else {
-                        Ok(TokenKind::Identifier {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(
+                            IdentifierToken::new(&source[lexeme_start..characters.current_idx()])
+                                .into(),
+                        )
                     }
                 }
                 c if c.is_ascii_digit() => {
@@ -80,7 +109,7 @@ impl Lexer {
                         }
                     }
                     match &source[lexeme_start..characters.current_idx()].parse::<f64>() {
-                        Ok(v) => Ok(TokenKind::Number { lexeme: *v }),
+                        Ok(v) => Ok(NumberToken::new(*v).into()),
                         Err(_) => Err(LexicalError::NaN { line }),
                     }
                 }
@@ -91,57 +120,55 @@ impl Lexer {
                             if new_char == '\n' {
                                 line += 1;
                             } else if new_char == '"' {
-                                break Ok(TokenKind::String {
-                                    lexeme: Rc::from(
-                                        &source[lexeme_start..characters.current_idx()],
-                                    ),
-                                });
+                                break Ok(StringToken::new(
+                                    &source[lexeme_start..characters.current_idx()],
+                                )
+                                .into());
                             }
                         }
                     }
                 },
                 '!' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::BangEqual {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(
+                            BangEqualToken::new(&source[lexeme_start..characters.current_idx()])
+                                .into(),
+                        )
                     } else {
-                        Ok(TokenKind::Bang {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(BangToken::new(&source[lexeme_start..characters.current_idx()]).into())
                     }
                 }
                 '=' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::EqualEqual {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(
+                            EqualEqualToken::new(&source[lexeme_start..characters.current_idx()])
+                                .into(),
+                        )
                     } else {
-                        Ok(TokenKind::Equal {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(EqualToken::new(&source[lexeme_start..characters.current_idx()]).into())
                     }
                 }
                 '<' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::LessEqual {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(
+                            LessEqualToken::new(&source[lexeme_start..characters.current_idx()])
+                                .into(),
+                        )
                     } else {
-                        Ok(TokenKind::Less {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(LessToken::new(&source[lexeme_start..characters.current_idx()]).into())
                     }
                 }
                 '>' => {
                     if characters.next_if_eq(&'=').is_some() {
-                        Ok(TokenKind::GreaterEqual {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(
+                            GreaterEqualToken::new(&source[lexeme_start..characters.current_idx()])
+                                .into(),
+                        )
                     } else {
-                        Ok(TokenKind::Greater {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(
+                            GreaterToken::new(&source[lexeme_start..characters.current_idx()])
+                                .into(),
+                        )
                     }
                 }
                 '/' => {
@@ -159,9 +186,7 @@ impl Lexer {
                         lexeme_start = characters.current_idx();
                         continue;
                     } else {
-                        Ok(TokenKind::Slash {
-                            lexeme: Rc::from(&source[lexeme_start..characters.current_idx()]),
-                        })
+                        Ok(SlashToken::new(&source[lexeme_start..characters.current_idx()]).into())
                     }
                 }
                 '\t' | ' ' | '\r' => {
@@ -267,54 +292,22 @@ where
 
 fn get_reserved_keyword_token(val: &str) -> Option<TokenKind> {
     match val {
-        "and" => Some(TokenKind::And {
-            lexeme: "and".into(),
-        }),
-        "class" => Some(TokenKind::Class {
-            lexeme: "class".into(),
-        }),
-        "else" => Some(TokenKind::Else {
-            lexeme: "else".into(),
-        }),
-        "false" => Some(TokenKind::False {
-            lexeme: "false".into(),
-        }),
-        "for" => Some(TokenKind::For {
-            lexeme: "for".into(),
-        }),
-        "fun" => Some(TokenKind::Fun {
-            lexeme: "fun".into(),
-        }),
-        "if" => Some(TokenKind::If {
-            lexeme: "if".into(),
-        }),
-        "nil" => Some(TokenKind::Nil {
-            lexeme: "nil".into(),
-        }),
-        "or" => Some(TokenKind::Or {
-            lexeme: "or".into(),
-        }),
-        "print" => Some(TokenKind::Print {
-            lexeme: "print".into(),
-        }),
-        "return" => Some(TokenKind::Return {
-            lexeme: "return".into(),
-        }),
-        "super" => Some(TokenKind::Super {
-            lexeme: "super".into(),
-        }),
-        "this" => Some(TokenKind::This {
-            lexeme: "this".into(),
-        }),
-        "true" => Some(TokenKind::True {
-            lexeme: "true".into(),
-        }),
-        "var" => Some(TokenKind::Var {
-            lexeme: "var".into(),
-        }),
-        "while" => Some(TokenKind::While {
-            lexeme: "while".into(),
-        }),
+        "and" => Some(AndToken::new("and").into()),
+        "class" => Some(ClassToken::new("class").into()),
+        "else" => Some(ElseToken::new("else").into()),
+        "false" => Some(FalseToken::new("false").into()),
+        "for" => Some(ForToken::new("for").into()),
+        "fun" => Some(FunToken::new("fun").into()),
+        "if" => Some(IfToken::new("if").into()),
+        "nil" => Some(NilToken::new("nil").into()),
+        "or" => Some(OrToken::new("or").into()),
+        "print" => Some(PrintToken::new("print").into()),
+        "return" => Some(ReturnToken::new("return").into()),
+        "super" => Some(SuperToken::new("super").into()),
+        "this" => Some(ThisToken::new("this").into()),
+        "true" => Some(TrueToken::new("true").into()),
+        "var" => Some(VarToken::new("var").into()),
+        "while" => Some(WhileToken::new("while").into()),
         _ => None,
     }
 }
@@ -333,21 +326,21 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen { lexeme: "(".into() }, 1),
-                Token::new(TokenKind::RightParen { lexeme: ")".into() }, 1),
-                Token::new(TokenKind::LeftBrace { lexeme: "{".into() }, 1),
-                Token::new(TokenKind::RightBrace { lexeme: "}".into() }, 1),
-                Token::new(TokenKind::Comma { lexeme: ",".into() }, 1),
-                Token::new(TokenKind::Dot { lexeme: ".".into() }, 1),
-                Token::new(TokenKind::Minus { lexeme: "-".into() }, 1),
-                Token::new(TokenKind::Plus { lexeme: "+".into() }, 1),
-                Token::new(TokenKind::Semicolon { lexeme: ";".into() }, 1),
-                Token::new(TokenKind::Equal { lexeme: "=".into() }, 1),
-                Token::new(TokenKind::Star { lexeme: "*".into() }, 1),
-                Token::new(TokenKind::Bang { lexeme: "!".into() }, 1),
-                Token::new(TokenKind::Less { lexeme: "<".into() }, 1),
-                Token::new(TokenKind::Greater { lexeme: ">".into() }, 1),
-                Token::new(TokenKind::Slash { lexeme: "/".into() }, 1),
+                Token::new(LeftParenToken::new("(").into(), 1),
+                Token::new(RightParenToken::new(")").into(), 1),
+                Token::new(LeftBraceToken::new("{").into(), 1),
+                Token::new(RightBraceToken::new("}").into(), 1),
+                Token::new(CommaToken::new(",").into(), 1),
+                Token::new(DotToken::new(".").into(), 1),
+                Token::new(MinusToken::new("-").into(), 1),
+                Token::new(PlusToken::new("+").into(), 1),
+                Token::new(SemicolonToken::new(";").into(), 1),
+                Token::new(EqualToken::new("=").into(), 1),
+                Token::new(StarToken::new("*").into(), 1),
+                Token::new(BangToken::new("!").into(), 1),
+                Token::new(LessToken::new("<").into(), 1),
+                Token::new(GreaterToken::new(">").into(), 1),
+                Token::new(SlashToken::new("/").into(), 1),
                 Token::new(TokenKind::Eof, 1),
             ]
         )
@@ -361,34 +354,14 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(
-                    TokenKind::BangEqual {
-                        lexeme: "!=".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::LessEqual {
-                        lexeme: "<=".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::GreaterEqual {
-                        lexeme: ">=".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::EqualEqual {
-                        lexeme: "==".into()
-                    },
-                    1
-                ),
-                Token::new(TokenKind::Equal { lexeme: "=".into() }, 1),
-                Token::new(TokenKind::Equal { lexeme: "=".into() }, 1),
-                Token::new(TokenKind::Bang { lexeme: "!".into() }, 2),
-                Token::new(TokenKind::Equal { lexeme: "=".into() }, 3),
+                Token::new(BangEqualToken::new("!=").into(), 1),
+                Token::new(LessEqualToken::new("<=").into(), 1),
+                Token::new(GreaterEqualToken::new(">=").into(), 1),
+                Token::new(EqualEqualToken::new("==").into(), 1),
+                Token::new(EqualToken::new("=").into(), 1),
+                Token::new(EqualToken::new("=").into(), 1),
+                Token::new(BangToken::new("!").into(), 2),
+                Token::new(EqualToken::new("=").into(), 3),
                 Token::new(TokenKind::Eof, 3),
             ]
         )
@@ -402,11 +375,11 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen { lexeme: "(".into() }, 1),
-                Token::new(TokenKind::RightParen { lexeme: ")".into() }, 1),
-                Token::new(TokenKind::LeftBrace { lexeme: "{".into() }, 1),
-                Token::new(TokenKind::RightBrace { lexeme: "}".into() }, 1),
-                Token::new(TokenKind::Bang { lexeme: "!".into() }, 5),
+                Token::new(LeftParenToken::new("(").into(), 1),
+                Token::new(RightParenToken::new(")").into(), 1),
+                Token::new(LeftBraceToken::new("{").into(), 1),
+                Token::new(RightBraceToken::new("}").into(), 1),
+                Token::new(BangToken::new("!").into(), 5),
                 Token::new(TokenKind::Eof, 5),
             ]
         )
@@ -420,12 +393,7 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(
-                    TokenKind::String {
-                        lexeme: r#""this is a string""#.into()
-                    },
-                    1
-                ),
+                Token::new(StringToken::new(r#""this is a string""#).into(), 1),
                 Token::new(TokenKind::Eof, 1),
             ]
         )
@@ -440,9 +408,7 @@ mod test {
             tokens.into_iter().flatten().collect_vec(),
             vec![
                 Token::new(
-                    TokenKind::String {
-                        lexeme: "\"this is a string\nacross multiple lines\"".into()
-                    },
+                    StringToken::new("\"this is a string\nacross multiple lines\"").into(),
                     2
                 ),
                 Token::new(TokenKind::Eof, 2),
@@ -472,9 +438,9 @@ mod test {
         assert_eq!(
             tokens.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number { lexeme: 1.0 }, 1)),
-                Ok(Token::new(TokenKind::Number { lexeme: 20.0 }, 1)),
-                Ok(Token::new(TokenKind::Number { lexeme: 4212.0 }, 1)),
+                Ok(Token::new(NumberToken::new(1.0).into(), 1)),
+                Ok(Token::new(NumberToken::new(20.0).into(), 1)),
+                Ok(Token::new(NumberToken::new(4212.0).into(), 1)),
                 Ok(Token::new(TokenKind::Eof, 1)),
             ]
         )
@@ -488,9 +454,9 @@ mod test {
         assert_eq!(
             tokens.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number { lexeme: 0.0001 }, 1)),
-                Ok(Token::new(TokenKind::Number { lexeme: 2.0 }, 1)),
-                Ok(Token::new(TokenKind::Number { lexeme: 421.2 }, 1)),
+                Ok(Token::new(NumberToken::new(0.0001).into(), 1)),
+                Ok(Token::new(NumberToken::new(2.0).into(), 1)),
+                Ok(Token::new(NumberToken::new(421.2).into(), 1)),
                 Ok(Token::new(TokenKind::Eof, 1)),
             ]
         )
@@ -504,14 +470,14 @@ mod test {
         assert_eq!(
             tokens.into_iter().collect_vec(),
             vec![
-                Ok(Token::new(TokenKind::Number { lexeme: 0.0 }, 1)),
-                Ok(Token::new(TokenKind::Dot { lexeme: ".".into() }, 1)),
-                Ok(Token::new(TokenKind::Number { lexeme: 2123.0 }, 1)),
-                Ok(Token::new(TokenKind::Dot { lexeme: ".".into() }, 1)),
-                Ok(Token::new(TokenKind::Dot { lexeme: ".".into() }, 1)),
-                Ok(Token::new(TokenKind::Number { lexeme: 2.0 }, 1)),
-                Ok(Token::new(TokenKind::Dot { lexeme: ".".into() }, 1)),
-                Ok(Token::new(TokenKind::Number { lexeme: 12.0 }, 1)),
+                Ok(Token::new(NumberToken::new(0.0).into(), 1)),
+                Ok(Token::new(DotToken::new(".").into(), 1)),
+                Ok(Token::new(NumberToken::new(2123.0).into(), 1)),
+                Ok(Token::new(DotToken::new(".").into(), 1)),
+                Ok(Token::new(DotToken::new(".").into(), 1)),
+                Ok(Token::new(NumberToken::new(2.0).into(), 1)),
+                Ok(Token::new(DotToken::new(".").into(), 1)),
+                Ok(Token::new(NumberToken::new(12.0).into(), 1)),
                 Ok(Token::new(TokenKind::Eof, 1)),
             ]
         )
@@ -525,44 +491,14 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(
-                    TokenKind::Identifier {
-                        lexeme: "some_identifier".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Identifier {
-                        lexeme: "_anotherOne".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Identifier {
-                        lexeme: "als0".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Identifier {
-                        lexeme: "c1".into()
-                    },
-                    1
-                ),
-                Token::new(TokenKind::Number { lexeme: 0.0 }, 1),
-                Token::new(
-                    TokenKind::Identifier {
-                        lexeme: "no".into()
-                    },
-                    1
-                ),
-                Token::new(TokenKind::Number { lexeme: 1.0 }, 1),
-                Token::new(
-                    TokenKind::Identifier {
-                        lexeme: "_no".into()
-                    },
-                    1
-                ),
+                Token::new(IdentifierToken::new("some_identifier").into(), 1),
+                Token::new(IdentifierToken::new("_anotherOne").into(), 1),
+                Token::new(IdentifierToken::new("als0").into(), 1),
+                Token::new(IdentifierToken::new("c1").into(), 1),
+                Token::new(NumberToken::new(0.0).into(), 1),
+                Token::new(IdentifierToken::new("no").into(), 1),
+                Token::new(NumberToken::new(1.0).into(), 1),
+                Token::new(IdentifierToken::new("_no").into(), 1),
                 Token::new(TokenKind::Eof, 1),
             ]
         )
@@ -576,102 +512,22 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(
-                    TokenKind::And {
-                        lexeme: "and".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Class {
-                        lexeme: "class".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Else {
-                        lexeme: "else".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::False {
-                        lexeme: "false".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::For {
-                        lexeme: "for".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Fun {
-                        lexeme: "fun".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::If {
-                        lexeme: "if".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Nil {
-                        lexeme: "nil".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Or {
-                        lexeme: "or".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Print {
-                        lexeme: "print".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Return {
-                        lexeme: "return".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Super {
-                        lexeme: "super".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::This {
-                        lexeme: "this".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::True {
-                        lexeme: "true".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::Var {
-                        lexeme: "var".into()
-                    },
-                    1
-                ),
-                Token::new(
-                    TokenKind::While {
-                        lexeme: "while".into()
-                    },
-                    1
-                ),
+                Token::new(AndToken::new("and").into(), 1),
+                Token::new(ClassToken::new("class").into(), 1),
+                Token::new(ElseToken::new("else").into(), 1),
+                Token::new(FalseToken::new("false").into(), 1),
+                Token::new(ForToken::new("for").into(), 1),
+                Token::new(FunToken::new("fun").into(), 1),
+                Token::new(IfToken::new("if").into(), 1),
+                Token::new(NilToken::new("nil").into(), 1),
+                Token::new(OrToken::new("or").into(), 1),
+                Token::new(PrintToken::new("print").into(), 1),
+                Token::new(ReturnToken::new("return").into(), 1),
+                Token::new(SuperToken::new("super").into(), 1),
+                Token::new(ThisToken::new("this").into(), 1),
+                Token::new(TrueToken::new("true").into(), 1),
+                Token::new(VarToken::new("var").into(), 1),
+                Token::new(WhileToken::new("while").into(), 1),
                 Token::new(TokenKind::Eof, 1),
             ]
         )
@@ -685,10 +541,10 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen { lexeme: "(".into() }, 1),
-                Token::new(TokenKind::RightParen { lexeme: ")".into() }, 2),
-                Token::new(TokenKind::LeftBrace { lexeme: "{".into() }, 3),
-                Token::new(TokenKind::RightBrace { lexeme: "}".into() }, 4),
+                Token::new(LeftParenToken::new("(").into(), 1),
+                Token::new(RightParenToken::new(")").into(), 2),
+                Token::new(LeftBraceToken::new("{").into(), 3),
+                Token::new(RightBraceToken::new("}").into(), 4),
                 Token::new(TokenKind::Eof, 5),
             ]
         )
@@ -702,10 +558,10 @@ mod test {
         assert_eq!(
             tokens.into_iter().flatten().collect_vec(),
             vec![
-                Token::new(TokenKind::LeftParen { lexeme: "(".into() }, 1),
-                Token::new(TokenKind::RightParen { lexeme: ")".into() }, 1),
-                Token::new(TokenKind::LeftBrace { lexeme: "{".into() }, 2),
-                Token::new(TokenKind::RightBrace { lexeme: "}".into() }, 2),
+                Token::new(LeftParenToken::new("(").into(), 1),
+                Token::new(RightParenToken::new(")").into(), 1),
+                Token::new(LeftBraceToken::new("{").into(), 2),
+                Token::new(RightBraceToken::new("}").into(), 2),
                 Token::new(TokenKind::Eof, 2),
             ]
         )
